@@ -10,3 +10,10 @@ coverage/
 .env*
 !.env.example
 !backend/.env.example
+
+# IDE
+.idea/
+.vscode/
+
+# Git backup
+.git.backup/
