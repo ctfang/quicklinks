@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/* 隐藏所有滚动条 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Firefox 隐藏滚动条 */
+* {
+  scrollbar-width: none;
+}
+
+@theme {
+  --animate-cloud-slow: cloud 60s linear infinite;
+  --animate-cloud-medium: cloud 45s linear infinite;
+  --animate-cloud-fast: cloud 30s linear infinite;
+  --animate-rain: rain linear infinite;
+  --animate-snow: snow linear infinite;
+  --animate-spin-slow: spin 10s linear infinite;
+  --animate-pulse-slow: pulse 4s ease-in-out infinite;
+  --animate-flash: flash 3s ease-in-out infinite;
+
+  @keyframes flash {
+    0%, 90%, 100% { opacity: 0; }
+    92%, 96% { opacity: 1; }
+    94% { opacity: 0.3; }
+  }
+
+  @keyframes cloud {
+    0% { transform: translateX(-100%) }
+    100% { transform: translateX(100vw) }
+  }
+
+  @keyframes rain {
+    0% { transform: translateY(-100px) rotate(15deg); opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateY(100vh) rotate(15deg); opacity: 0; }
+  }
+
+  @keyframes snow {
+    0% { transform: translateY(-10px) translateX(0); opacity: 0; }
+    20% { opacity: 1; }
+    50% { transform: translateY(50vh) translateX(20px); }
+    80% { opacity: 1; }
+    100% { transform: translateY(100vh) translateX(-20px); opacity: 0; }
+  }
+}
+

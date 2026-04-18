@@ -1,0 +1,12 @@
+name: navihub
+debug: env("APP_DEBUG", true)
+url: env("APP_URL", "http://127.0.0.1")
+
+servers:
+  http:
+    port: env("PORT", "3000")
+
+log:
+  path: env("LOG_PATH", "")
+  level: env("LOG_LEVEL", "info")
+  formatter: env("LOG_FORMATTER", "text")

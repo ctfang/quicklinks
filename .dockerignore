@@ -1,0 +1,16 @@
+node_modules
+frontend/node_modules
+dist
+frontend/dist
+.git
+.gitignore
+.idea
+*.log
+.env
+.env.*
+*.db
+database.sqlite
+backend/database.sqlite
+navihub
+navihub.exe
+README.md

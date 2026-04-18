@@ -1,0 +1,21 @@
+# NaviHub 业务配置：通过 env("…") 从环境变量（含框架自动加载的 .env）取值。
+# 与 agent-cli / go-home-admin 一致：勿在 main 里手写 godotenv，由框架 ConfigProvider 加载。
+
+public_url: env("APP_PUBLIC_URL", "http://127.0.0.1:3000")
+static_dir: env("STATIC_DIR", "")
+
+# JWT：登录/注册签发访问令牌；代码侧使用 os.Getenv 读取下列同名环境变量。
+# JWT_SECRET 必填（否则无法登录）；JWT_ACCESS_TTL_SECONDS 默认 86400；
+# 生产环境 HTTPS 下设 JWT_COOKIE_SECURE=true 以启用 Secure Cookie。
+# CORS_ALLOW_ORIGINS：逗号分隔的浏览器 Origin；为空则沿用 Access-Control-Allow-Origin: *（仅适合同域或无需 Cookie 的跨域）。
+jwt_secret: env("JWT_SECRET", "")
+jwt_access_ttl_seconds: env("JWT_ACCESS_TTL_SECONDS", "86400")
+jwt_cookie_secure: env("JWT_COOKIE_SECURE", "false")
+cors_allow_origins: env("CORS_ALLOW_ORIGINS", "")
+
+smtp_host: env("SMTP_HOST", "smtp.qq.com")
+smtp_port: env("SMTP_PORT", "587")
+smtp_user: env("SMTP_USER", "")
+smtp_password: env("SMTP_PASSWORD", "")
+smtp_from: env("SMTP_FROM", "")
+smtp_timeout_seconds: env("SMTP_TIMEOUT_SECONDS", "30")

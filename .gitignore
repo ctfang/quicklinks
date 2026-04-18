@@ -1,0 +1,12 @@
+node_modules/
+build/
+dist/
+navihub
+navihub.exe
+database.sqlite
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+!backend/.env.example
