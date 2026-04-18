@@ -5,6 +5,8 @@ import { User, Team, Project, logout, getUserTeams, getGuestNavigation, getMe } 
 const STORAGE_KEYS = {
   CURRENT_TEAM_ID: 'navihub_current_team_id',
   IS_EDIT_MODE: 'navihub_is_edit_mode',
+  /** 曾成功建立会话时置位；无此项时不请求 /api/auth/me，避免访客首屏多余请求 */
+  SESSION_HINT: 'navihub_session_hint',
 };
 
 interface AppContextType {
@@ -78,6 +80,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const hydrateUser = useCallback(async (u: User) => {
     setUser(u);
+    try {
+      localStorage.setItem(STORAGE_KEYS.SESSION_HINT, '1');
+    } catch {
+      // ignore
+    }
     const [t, guest] = await Promise.all([getUserTeams(u.id), getGuestNavigation()]);
     setTeams(t);
     setGuestNavUserId(guest.userId);
@@ -100,16 +107,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     let cancelled = false;
     const init = async () => {
       setIsLoading(true);
+      let hasSessionHint = false;
       try {
-        const me = await getMe();
-        if (me && !cancelled) {
-          try {
-            await hydrateUser(me);
-            return;
-          } catch {
-            if (!cancelled) {
-              setUser(null);
-              setTeams([]);
+        hasSessionHint = localStorage.getItem(STORAGE_KEYS.SESSION_HINT) === '1';
+      } catch {
+        hasSessionHint = false;
+      }
+      try {
+        if (hasSessionHint) {
+          const me = await getMe();
+          if (!me) {
+            try {
+              localStorage.removeItem(STORAGE_KEYS.SESSION_HINT);
+            } catch {
+              // ignore
+            }
+          } else if (!cancelled) {
+            try {
+              await hydrateUser(me);
+              return;
+            } catch {
+              if (!cancelled) {
+                setUser(null);
+                setTeams([]);
+              }
             }
           }
         }
@@ -139,6 +160,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const logoutUser = async () => {
     setIsLoading(true);
     await logout();
+    try {
+      localStorage.removeItem(STORAGE_KEYS.SESSION_HINT);
+    } catch {
+      // ignore
+    }
     setUser(null);
     setTeams([]);
     setCurrentTeamState(null);

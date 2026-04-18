@@ -29,14 +29,9 @@ func init() {
 }
 
 func main() {
-
 	app := providers.NewApp()
-
 	providers.NewNavihubBootstrap()
-
 	app.Run([]constraint.KernelServer{
-
 		http.GetServer(),
 	})
-
 }

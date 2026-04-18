@@ -3,6 +3,7 @@ package http
 import (
 	"io/fs"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/ctfang/navihub/backend/routes"
@@ -27,9 +28,12 @@ type Kernel struct {
 
 func (k *Kernel) Init() {
 	k.LoadRoute(routes.GetAllProvider())
-	k.Middleware = []gin.HandlerFunc{
-		gin.Logger(),
+	k.Middleware = []gin.HandlerFunc{}
+
+	if gin.IsDebugging() {
+		k.Middleware = append(k.Middleware, gin.Logger())
 	}
+
 	k.MiddlewareGroup = map[string][]gin.HandlerFunc{
 		"admin": {Cors()},
 		"api":   {Cors()},
@@ -61,14 +65,35 @@ func (k *Kernel) serveEmbeddedSPA(c *gin.Context, distFS fs.FS) {
 
 	if f, err := distFS.Open(urlPath); err == nil {
 		f.Close()
+		setEmbeddedCacheHeaders(c, urlPath)
 		http.ServeFileFS(c.Writer, c.Request, distFS, urlPath)
 		return
 	}
 
+	setEmbeddedCacheHeaders(c, "index.html")
 	http.ServeFileFS(c.Writer, c.Request, distFS, "index.html")
 }
 
 func (k *Kernel) Exit() {}
+
+// setEmbeddedCacheHeaders：HTML 壳不长期缓存；带 hash 的 JS/CSS 与静态资源强缓存
+func setEmbeddedCacheHeaders(c *gin.Context, urlPath string) {
+	lower := strings.ToLower(urlPath)
+	if strings.HasSuffix(lower, ".html") {
+		c.Header("Cache-Control", "no-cache")
+		return
+	}
+	switch strings.ToLower(filepath.Ext(urlPath)) {
+	case ".js", ".css", ".map":
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".woff", ".woff2", ".ttf", ".eot":
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	default:
+		if urlPath != "" {
+			c.Header("Cache-Control", "public, max-age=86400")
+		}
+	}
+}
 
 func GetServer() constraint.KernelServer {
 	return NewKernel()
