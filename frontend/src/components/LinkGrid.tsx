@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { NavLink } from '../services/api';
 import * as Icons from 'lucide-react';
-import { Edit2, Trash2, Plus, ExternalLink, Link as LinkLucide } from 'lucide-react';
+import { Edit2, Trash2, Plus, ExternalLink, Link as LinkLucide, GripVertical } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 function getLetterFromUrl(url: string): string {
@@ -74,9 +74,67 @@ interface LinkGridProps {
   onDelete?: (id: string) => void;
   onAdd?: () => void;
   showActions?: boolean;
+  onReorder?: (groupId: string | undefined, links: NavLink[]) => void;
+  groupId?: string;
 }
 
-export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions }: LinkGridProps) => {
+export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, onReorder, groupId }: LinkGridProps) => {
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const dragCounter = useRef(0);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (!showActions || !onReorder) return;
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // 使用默认拖拽图像，提供视觉反馈
+    // 不设置自定义 dragImage，让浏览器使用默认的半透明克隆
+  };
+
+  const handleDragEnter = (e: React.DragEvent, index: number) => {
+    if (!showActions || !onReorder) return;
+    e.preventDefault();
+    dragCounter.current++;
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!showActions || !onReorder) return;
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setDragOverIndex(null);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!showActions || !onReorder) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    if (!showActions || !onReorder) return;
+    e.preventDefault();
+    dragCounter.current = 0;
+    setDragOverIndex(null);
+    
+    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+      const newLinks = [...links];
+      const [removed] = newLinks.splice(draggedIndex, 1);
+      newLinks.splice(dropIndex, 0, removed);
+      onReorder(groupId, newLinks);
+    }
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    dragCounter.current = 0;
+  };
+
   return (
     <div className="w-full">
       {title && (
@@ -102,8 +160,10 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions }:
         </div>
       ) : (
         <div className="grid grid-cols-12 gap-3 md:gap-4 grid-flow-dense">
-          {links.map(link => {
+          {links.map((link, index) => {
             const size = link.displaySize || 'medium';
+            const isDragging = draggedIndex === index;
+            const isDragOver = dragOverIndex === index;
             
             return (
               <div 
@@ -114,14 +174,21 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions }:
                   size === 'small' && "col-span-6 sm:col-span-4 md:col-span-3 lg:col-span-2",
                   size === 'medium' && "col-span-6 sm:col-span-4 md:col-span-3 lg:col-span-2",
                   size === 'large' && "col-span-12 sm:col-span-6 md:col-span-4 lg:col-span-3",
-                  size === 'list' && "col-span-12 sm:col-span-12 md:col-span-6 lg:col-span-4"
+                  size === 'list' && "col-span-12 sm:col-span-12 md:col-span-6 lg:col-span-4",
+                  isDragging && "opacity-50",
+                  isDragOver && "scale-105"
                 )}
+                onDragEnter={(e) => handleDragEnter(e, index)}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, index)}
               >
                 <a
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   title={size === 'icon' ? link.title : undefined}
+                  draggable={false}
                   className={cn(
                     "flex items-center w-full h-full rounded-2xl bg-white/5 hover:bg-white/15 border border-white/5 hover:border-white/20 transition-all duration-300 overflow-hidden",
                     size === 'icon' && "flex-col p-2 justify-center items-center w-12 h-12",
@@ -176,16 +243,31 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions }:
                 </a>
 
                 {showActions && (
-                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/90 backdrop-blur-md p-1 rounded-lg border border-white/20 shadow-xl z-10">
+                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* 拖拽手柄 */}
+                    {onReorder && (
+                      <div 
+                        draggable={true}
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragEnd={handleDragEnd}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="p-1.5 text-white/50 hover:text-white/80 cursor-grab active:cursor-grabbing select-none bg-slate-900/90 backdrop-blur-md rounded-lg border border-white/20 shadow-xl"
+                        title="拖拽排序"
+                      >
+                        <GripVertical size={14} />
+                      </div>
+                    )}
+                    {/* 编辑按钮 */}
                     <button 
-                      onClick={(e) => { e.preventDefault(); onEdit?.(link); }}
-                      className="p-1.5 text-white/70 hover:text-blue-400 hover:bg-white/10 rounded-md transition-colors"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); onEdit?.(link); }}
+                      className="p-1.5 text-white/70 hover:text-blue-400 hover:bg-white/10 rounded-md transition-colors bg-slate-900/90 backdrop-blur-md border border-white/20 shadow-xl"
                     >
                       <Edit2 size={12} />
                     </button>
+                    {/* 删除按钮 */}
                     <button 
-                      onClick={(e) => { e.preventDefault(); onDelete?.(link.id); }}
-                      className="p-1.5 text-white/70 hover:text-red-400 hover:bg-white/10 rounded-md transition-colors"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDelete?.(link.id); }}
+                      className="p-1.5 text-white/70 hover:text-red-400 hover:bg-white/10 rounded-md transition-colors bg-slate-900/90 backdrop-blur-md border border-white/20 shadow-xl"
                     >
                       <Trash2 size={12} />
                     </button>

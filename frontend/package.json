@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf ../backend/dist",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

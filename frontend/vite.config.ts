@@ -9,6 +9,10 @@ export default defineConfig(({mode}) => {
     process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3000';
   return {
     plugins: [react(), tailwindcss()],
+    build: {
+      outDir: '../backend/dist',
+      emptyOutDir: true,
+    },
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

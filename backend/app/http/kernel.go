@@ -1,28 +1,35 @@
 package http
 
 import (
+	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/ctfang/navihub/backend/routes"
 	"github.com/gin-gonic/gin"
 	"github.com/go-home-admin/home/bootstrap/constraint"
 	homepv "github.com/go-home-admin/home/bootstrap/providers"
-	"github.com/go-home-admin/home/bootstrap/services"
 	"github.com/go-home-admin/home/bootstrap/servers"
 )
 
+// embeddedFrontend 由 main.go //go:embed dist 注入
+var embeddedFrontend fs.FS
+
+func SetFrontend(f fs.FS) {
+	embeddedFrontend = f
+}
+
 // Kernel @Bean
 type Kernel struct {
-	*servers.Http `inject:""`
+	*servers.Http         `inject:""`
 	*homepv.RouteProvider `inject:""`
 }
 
 func (k *Kernel) Init() {
 	k.LoadRoute(routes.GetAllProvider())
-	k.Middleware = []gin.HandlerFunc{}
+	k.Middleware = []gin.HandlerFunc{
+		gin.Logger(),
+	}
 	k.MiddlewareGroup = map[string][]gin.HandlerFunc{
 		"admin": {Cors()},
 		"api":   {Cors()},
@@ -32,57 +39,33 @@ func (k *Kernel) Init() {
 }
 
 func (k *Kernel) Boot() {
-	staticDir := resolveStaticDir()
-	if staticDir == "" {
+	if embeddedFrontend == nil {
 		return
 	}
-	dir := http.Dir(staticDir)
 	k.Engine.NoRoute(func(c *gin.Context) {
-		if strings.HasPrefix(c.Request.URL.Path, "/api") {
-			c.AbortWithStatus(http.StatusNotFound)
-			return
-		}
-		rel := strings.TrimPrefix(c.Request.URL.Path, "/")
-		fpath := filepath.Join(staticDir, filepath.Clean(rel))
-		if rel != "" {
-			if fi, err := os.Stat(fpath); err == nil && !fi.IsDir() {
-				http.FileServer(dir).ServeHTTP(c.Writer, c.Request)
-				return
-			}
-		}
-		http.ServeFile(c.Writer, c.Request, filepath.Join(staticDir, "index.html"))
+		k.serveEmbeddedSPA(c, embeddedFrontend)
 	})
 }
 
-func resolveStaticDir() string {
-	if s := strings.TrimSpace(os.Getenv("STATIC_DIR")); s != "" {
-		return filepath.Clean(s)
+// serveEmbeddedSPA：静态资源仅来自 embed；勿用 http.FileServer（见 net/http fs.go 对 /index.html 的 301）
+func (k *Kernel) serveEmbeddedSPA(c *gin.Context, distFS fs.FS) {
+	if strings.HasPrefix(c.Request.URL.Path, "/api") {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
 	}
-	if root := homepv.GetBean("config"); root != nil {
-		if b, ok := root.(homepv.Bean); ok {
-			if v := b.GetBean("navihub"); v != nil {
-				if nv, ok := v.(*services.Config); ok {
-					if s := strings.TrimSpace(nv.GetString("static_dir")); s != "" {
-						return filepath.Clean(s)
-					}
-				}
-			}
-		}
+
+	urlPath := strings.TrimPrefix(c.Request.URL.Path, "/")
+	if urlPath == "" {
+		urlPath = "index.html"
 	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return ""
+
+	if f, err := distFS.Open(urlPath); err == nil {
+		f.Close()
+		http.ServeFileFS(c.Writer, c.Request, distFS, urlPath)
+		return
 	}
-	for _, dir := range []string{
-		filepath.Join(wd, "frontend", "dist"),
-		filepath.Join(wd, "..", "frontend", "dist"),
-	} {
-		idx := filepath.Join(dir, "index.html")
-		if fi, err := os.Stat(idx); err == nil && !fi.IsDir() {
-			return filepath.Clean(dir)
-		}
-	}
-	return ""
+
+	http.ServeFileFS(c.Writer, c.Request, distFS, "index.html")
 }
 
 func (k *Kernel) Exit() {}

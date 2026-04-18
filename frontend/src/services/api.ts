@@ -41,6 +41,7 @@ export interface NavLink {
   userId?: number;
   groupId?: string;
   displaySize?: 'icon' | 'small' | 'medium' | 'large' | 'list';
+  order?: number;
 }
 
 export interface NavGroup {
@@ -153,6 +154,14 @@ export const logout = async (): Promise<void> => {
   });
 };
 
+/** 登录状态下直接修改密码（需要旧密码验证） */
+export const changePassword = async (oldPassword: string, newPassword: string): Promise<void> => {
+  await fetchApi('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ oldPassword, newPassword }),
+  });
+};
+
 // Links
 /** 未登录访客：首用户个人链接 + 分组 */
 export const getGuestNavigation = async (): Promise<{
@@ -196,6 +205,17 @@ export const updateLink = async (id: string, updates: Partial<NavLink>): Promise
     method: 'PUT',
     body: JSON.stringify(updates),
   });
+};
+
+/** 批量更新链接顺序 */
+export const updateLinksOrder = async (links: { id: string; order: number }[]): Promise<void> => {
+  // 使用 Promise.all 并行更新所有链接的顺序
+  await Promise.all(
+    links.map(link => fetchApi(`/links/${link.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ order: link.order }),
+    }))
+  );
 };
 
 export const deleteLink = async (id: string): Promise<void> => {

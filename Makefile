@@ -1,8 +1,8 @@
 # Windows: use `mingw32-make` or run commands manually (see README).
 
-.PHONY: dev-backend dev-frontend build-frontend build-backend serve docker
+.PHONY: dev-backend dev-frontend build-frontend build-backend build-linux serve docker
 
-# 构建前端后由后端统一启动（默认 :3000，自动挂载 ../frontend/dist）
+# 构建前端后由后端统一启动（默认 :3000；Vite 输出到 backend/dist，见 frontend/vite.config.ts）
 serve: build-frontend
 	cd backend && go run .
 
@@ -18,5 +18,10 @@ build-frontend:
 build-backend:
 	cd backend && go build -o navihub .
 
+build-linux: build-frontend
+	# 前端已直接构建到 backend/dist，go:embed dist 可以正确打包
+	# cd backend && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../app .
+	cd backend && $env:GOOS="linux"; $env:GOARCH="amd64"; $env:CGO_ENABLED="0"; go build -ldflags="-s -w" -o ./app .
+
 docker:
-	docker compose up --build
+	docker compose up

@@ -3,7 +3,7 @@ import { SearchBar } from '../components/SearchBar';
 import { LinkGrid } from '../components/LinkGrid';
 import { ClockWidget } from '../components/Widgets';
 import { useAppContext } from '../context/AppContext';
-import { getPopularLinks, getPersonalLinks, getTeamLinks, NavLink, addLink, updateLink, deleteLink, getTeamProjects, Project, addProject, updateProject, deleteProject, NavGroup, getGroups, addGroup, updateGroup, deleteGroup, getGuestNavigation } from '../services/api';
+import { getPopularLinks, getPersonalLinks, getTeamLinks, NavLink, addLink, updateLink, deleteLink, getTeamProjects, Project, addProject, updateProject, deleteProject, NavGroup, getGroups, addGroup, updateGroup, deleteGroup, getGuestNavigation, updateLinksOrder } from '../services/api';
 import { LinkModal } from '../components/LinkModal';
 import { ProjectModal } from '../components/ProjectModal';
 import { GroupModal } from '../components/GroupModal';
@@ -190,6 +190,35 @@ export const Home = () => {
     });
   };
 
+  // 处理链接重新排序
+  const handleReorderLinks = async (groupId: string | undefined, reorderedLinks: NavLink[]) => {
+    // 构建更新数据，只更新 order 字段
+    const updates = reorderedLinks.map((link, index) => ({
+      id: link.id,
+      order: index,
+    }));
+    
+    try {
+      await updateLinksOrder(updates);
+      // 更新本地状态
+      setLinks(prevLinks => {
+        const newLinks = [...prevLinks];
+        // 更新被重新排序的链接的 order 值
+        reorderedLinks.forEach((link, index) => {
+          const existingIndex = newLinks.findIndex(l => l.id === link.id);
+          if (existingIndex !== -1) {
+            newLinks[existingIndex] = { ...newLinks[existingIndex], order: index };
+          }
+        });
+        return newLinks;
+      });
+    } catch (err) {
+      console.error('Failed to reorder links:', err);
+      // 如果保存失败，重新获取数据
+      fetchLinksAndProjects();
+    }
+  };
+
   // Derived data
   const generalLinks = links.filter(l => !l.projectId);
   const generalGroups = groups.filter(g => !g.projectId);
@@ -199,7 +228,9 @@ export const Home = () => {
     targetGroups.forEach(g => groupedLinks.set(g.id, []));
     groupedLinks.set('ungrouped', []);
 
-    targetLinks.forEach(link => {
+    // 按 order 排序后再分组
+    const sortedLinks = [...targetLinks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    sortedLinks.forEach(link => {
       if (link.groupId && groupedLinks.has(link.groupId)) {
         groupedLinks.get(link.groupId)!.push(link);
       } else {
@@ -221,6 +252,7 @@ export const Home = () => {
               links={groupedLinks.get(group.id)!} 
               title={group.name}
               showActions={isEditMode}
+              groupId={group.id}
               onAdd={() => {
                 setEditingLink(null);
                 setAddingToProjectId(projectId);
@@ -230,6 +262,7 @@ export const Home = () => {
               }}
               onEdit={handleEditLink}
               onDelete={handleDeleteLink}
+              onReorder={isEditMode ? handleReorderLinks : undefined}
             />
           </div>
         ))}
@@ -240,9 +273,11 @@ export const Home = () => {
             links={groupedLinks.get('ungrouped')!} 
             title={targetGroups.length > 0 ? undefined : defaultTitle}
             showActions={isEditMode}
+            groupId={undefined}
             onAdd={() => handleAddLink(projectId)}
             onEdit={handleEditLink}
             onDelete={handleDeleteLink}
+            onReorder={isEditMode ? handleReorderLinks : undefined}
           />
         )}
 

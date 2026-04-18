@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { getUserWidgets, updateWidgetConfig, WidgetConfig, getTeamMembers, createTeam, updateTeam, deleteTeam, addTeamMember, removeTeamMember, TeamMember } from '../services/api';
-import { Save, User as UserIcon, LayoutDashboard, Users, Plus, X, UserPlus, Trash2, Edit2 } from 'lucide-react';
+import { getUserWidgets, updateWidgetConfig, WidgetConfig, getTeamMembers, createTeam, updateTeam, deleteTeam, addTeamMember, removeTeamMember, TeamMember, changePassword } from '../services/api';
+import { Save, User as UserIcon, LayoutDashboard, Users, Plus, X, UserPlus, Trash2, Edit2, Lock, Eye, EyeOff } from 'lucide-react';
+import { sha256Hex } from '../lib/passwordHash';
 import { cn } from '../lib/utils';
 import { ConfirmModal } from '../components/ConfirmModal';
 
@@ -23,6 +24,16 @@ export const Settings = () => {
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editTeamName, setEditTeamName] = useState('');
   const [editTeamDesc, setEditTeamDesc] = useState('');
+
+  // Change Password State
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   // Confirm Modal State
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -122,6 +133,46 @@ export const Settings = () => {
         }
       }
     });
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (newPassword.length < 6) {
+      setPasswordError('新密码至少 6 位');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('两次输入的新密码不一致');
+      return;
+    }
+
+    try {
+      const oldHash = await sha256Hex(oldPassword);
+      const newHash = await sha256Hex(newPassword);
+      await changePassword(oldHash, newHash);
+      setPasswordSuccess('密码修改成功');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setIsChangingPassword(false);
+        setPasswordSuccess('');
+      }, 2000);
+    } catch (err: any) {
+      setPasswordError(err.message || '修改失败，请检查旧密码是否正确');
+    }
+  };
+
+  const cancelChangePassword = () => {
+    setIsChangingPassword(false);
+    setOldPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setPasswordSuccess('');
   };
 
   if (!isSettingsOpen) return null;
@@ -237,6 +288,113 @@ export const Settings = () => {
                     <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
                   </label>
                 </div>
+              </div>
+
+              <div>
+                <h2 className="text-xl font-medium border-b border-white/10 pb-4 mb-6">安全设置</h2>
+                {!isChangingPassword ? (
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-500/20 rounded-lg">
+                        <Lock size={20} className="text-blue-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">修改密码</h3>
+                        <p className="text-sm text-white/60 mt-1">定期更换密码可以提高账号安全性</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsChangingPassword(true)}
+                      className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
+                    >
+                      修改
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleChangePassword} className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-blue-500/20 rounded-lg">
+                        <Lock size={20} className="text-blue-400" />
+                      </div>
+                      <h3 className="font-medium">修改密码</h3>
+                    </div>
+
+                    {passwordError && (
+                      <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-200 text-sm">
+                        {passwordError}
+                      </div>
+                    )}
+                    {passwordSuccess && (
+                      <div className="p-3 rounded-lg bg-green-500/20 border border-green-500/30 text-green-200 text-sm">
+                        {passwordSuccess}
+                      </div>
+                    )}
+
+                    <div className="relative">
+                      <input
+                        type={showOldPassword ? 'text' : 'password'}
+                        placeholder="当前密码"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 pr-10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOldPassword(!showOldPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                      >
+                        {showOldPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        placeholder="新密码（至少 6 位）"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 pr-10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                      >
+                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        placeholder="确认新密码"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 pr-10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={cancelChangePassword}
+                        className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl font-medium transition-colors"
+                      >
+                        取消
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-medium transition-colors"
+                      >
+                        确认修改
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           )}

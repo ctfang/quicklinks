@@ -14,6 +14,8 @@ WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
+# 与 vite outDir（../backend/dist）一致，供 //go:embed dist
+COPY --from=frontend /backend/dist ./dist
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /navihub .
 
 # Stage 3: minimal runtime image
@@ -22,8 +24,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=gobuild /navihub /app/navihub
-COPY --from=frontend /app/dist /app/dist
-ENV STATIC_DIR=/app/dist
 ENV PORT=3000
 EXPOSE 3000
 CMD ["/app/navihub"]
