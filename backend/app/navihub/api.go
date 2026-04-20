@@ -39,6 +39,7 @@ type WeatherData struct {
 	Place       string `json:"place"`
 	Humidity    int    `json:"humidity,omitempty"`
 	Wind        string `json:"wind,omitempty"`
+	Error       string `json:"error,omitempty"`
 }
 
 type cachedWeather struct {
@@ -346,6 +347,7 @@ type linkOut struct {
 	DisplaySize *string `json:"displaySize,omitempty"`
 	Order       int     `json:"order"`
 	BgColor     *string `json:"bgColor,omitempty"`
+	RowNum      int     `json:"rowNum"`
 }
 
 type navGroupOut struct {
@@ -369,12 +371,13 @@ func scanLink(rows *sql.Rows) (*linkOut, error) {
 		displaySize    sql.NullString
 		orderNum       int
 		bgColor        sql.NullString
+		rowNum         int
 	)
-	if err := rows.Scan(&id, &title, &url, &icon, &clicks, &isPub, &teamID, &projectID, &userID, &groupID, &displaySize, &orderNum, &bgColor); err != nil {
+	if err := rows.Scan(&id, &title, &url, &icon, &clicks, &isPub, &teamID, &projectID, &userID, &groupID, &displaySize, &orderNum, &bgColor, &rowNum); err != nil {
 		return nil, err
 	}
 	out := &linkOut{
-		ID: id, Title: title, URL: url, Clicks: clicks, IsPublic: isPub != 0, Order: orderNum,
+		ID: id, Title: title, URL: url, Clicks: clicks, IsPublic: isPub != 0, Order: orderNum, RowNum: rowNum,
 	}
 	if icon.Valid {
 		out.Icon = &icon.String
@@ -418,7 +421,7 @@ func navigationGuest(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 		uid := firstID.Int64
-		rows, err := db.Query(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor FROM links WHERE userId = ? ORDER BY order_num, id`, uid)
+		rows, err := db.Query(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor, row_num FROM links WHERE userId = ? ORDER BY row_num, order_num, id`, uid)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -476,7 +479,7 @@ func navGroupFromScan(id, name string, uid sql.NullInt64, teamID, projectID sql.
 
 func linksPopular(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		rows, err := db.Query(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor FROM links WHERE isPublic = 1 ORDER BY clicks DESC LIMIT 50`)
+		rows, err := db.Query(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor, row_num FROM links WHERE isPublic = 1 ORDER BY clicks DESC LIMIT 50`)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -509,7 +512,7 @@ func linksPersonal(db *sql.DB) gin.HandlerFunc {
 			forbid(c, "只能访问本人的链接列表")
 			return
 		}
-		rows, err := db.Query(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor FROM links WHERE userId = ? ORDER BY order_num, id`, uid)
+		rows, err := db.Query(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor, row_num FROM links WHERE userId = ? ORDER BY row_num, order_num, id`, uid)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -538,7 +541,7 @@ func linksTeam(db *sql.DB) gin.HandlerFunc {
 		if !assertTeamMember(c, db, tid, jwtUID) {
 			return
 		}
-		rows, err := db.Query(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor FROM links WHERE teamId = ? ORDER BY order_num, id`, tid)
+		rows, err := db.Query(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor, row_num FROM links WHERE teamId = ? ORDER BY row_num, order_num, id`, tid)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -730,19 +733,20 @@ func linksCreate(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		row := db.QueryRow(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor FROM links WHERE id = ?`, id)
+		row := db.QueryRow(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor, row_num FROM links WHERE id = ?`, id)
 		var l linkOut
 		var iconN sql.NullString
 		var teamID, projectID, groupID, displaySize, bgColor sql.NullString
 		var userID sql.NullInt64
-		var isP, orderNum int
-		err = row.Scan(&l.ID, &l.Title, &l.URL, &iconN, &l.Clicks, &isP, &teamID, &projectID, &userID, &groupID, &displaySize, &orderNum, &bgColor)
+		var isP, orderNum, rowNum int
+		err = row.Scan(&l.ID, &l.Title, &l.URL, &iconN, &l.Clicks, &isP, &teamID, &projectID, &userID, &groupID, &displaySize, &orderNum, &bgColor, &rowNum)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		l.IsPublic = isP != 0
 		l.Order = orderNum
+		l.RowNum = rowNum
 		if iconN.Valid {
 			l.Icon = &iconN.String
 		}
@@ -789,6 +793,7 @@ var linkUpdateWhitelist = map[string]string{
 	"displaySize": "displaySize",
 	"order":       "order_num",
 	"bgColor":     "bgColor",
+	"rowNum":      "row_num",
 }
 
 func linksUpdate(db *sql.DB) gin.HandlerFunc {
@@ -856,6 +861,14 @@ func linksUpdate(db *sql.DB) gin.HandlerFunc {
 					}
 					sets = append(sets, col+" = ?")
 					args = append(args, n)
+				case "rowNum":
+					var n int
+					if err := json.Unmarshal(v, &n); err != nil {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rowNum"})
+						return
+					}
+					sets = append(sets, col+" = ?")
+					args = append(args, n)
 				case "userId":
 					var z any
 					if err := json.Unmarshal(v, &z); err != nil {
@@ -908,13 +921,13 @@ func linksUpdate(db *sql.DB) gin.HandlerFunc {
 				}
 			}
 		}
-		row := db.QueryRow(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor FROM links WHERE id = ?`, id)
+		row := db.QueryRow(`SELECT id, title, url, icon, clicks, isPublic, teamId, projectId, userId, groupId, displaySize, order_num, bgColor, row_num FROM links WHERE id = ?`, id)
 		var l linkOut
 		var iconN sql.NullString
 		var teamID, projectID, groupID, displaySize, bgColor sql.NullString
 		var userID sql.NullInt64
-		var isP, orderNum int
-		if err = row.Scan(&l.ID, &l.Title, &l.URL, &iconN, &l.Clicks, &isP, &teamID, &projectID, &userID, &groupID, &displaySize, &orderNum, &bgColor); err == sql.ErrNoRows {
+		var isP, orderNum, rowNum int
+		if err = row.Scan(&l.ID, &l.Title, &l.URL, &iconN, &l.Clicks, &isP, &teamID, &projectID, &userID, &groupID, &displaySize, &orderNum, &bgColor, &rowNum); err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		} else if err != nil {
@@ -923,6 +936,7 @@ func linksUpdate(db *sql.DB) gin.HandlerFunc {
 		}
 		l.IsPublic = isP != 0
 		l.Order = orderNum
+		l.RowNum = rowNum
 		if iconN.Valid {
 			l.Icon = &iconN.String
 		}
@@ -2044,6 +2058,12 @@ func getWeather(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		// 检查第三方API返回的code字段
+		if code, ok := apiData["code"].(float64); ok && int(code) != 200 {
+			c.JSON(http.StatusOK, defaultWeather(city))
+			return
+		}
+
 		if code, ok := apiData["code"].(float64); ok && int(code) == 200 {
 			// 解析第三方API响应，映射到前端期望的格式
 			weatherData := WeatherData{
@@ -2108,9 +2128,8 @@ func getWeather(db *sql.DB) gin.HandlerFunc {
 
 func defaultWeather(city string) WeatherData {
 	return WeatherData{
-		Code:        200,
-		Weather1:    "晴",
-		Temperature: 22,
-		Place:       city,
+		Code:  0,
+		Error: "天气数据获取失败",
+		Place: city,
 	}
 }

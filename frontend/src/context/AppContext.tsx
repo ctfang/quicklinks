@@ -28,6 +28,7 @@ interface AppContextType {
   isAdmin: boolean;
   isLoading: boolean;
   teams: Team[];
+  setTeams: (teams: Team[] | ((prev: Team[]) => Team[])) => void;
   currentTeam: Team | null;
   currentProject: Project | null;
   /** 访客首页数据源用户 id（users 表按 id 升序第一条），未登录时搜索等沿用 */
@@ -49,6 +50,8 @@ interface AppContextType {
   setSearchEngine: (engine: SearchEngine) => void;
   /** 当前天气数据，全局共享避免重复请求 */
   currentWeather: WeatherInfo | null;
+  /** 天气获取错误信息 */
+  weatherError: string | null;
   /** 刷新天气数据 */
   refreshWeather: () => Promise<void>;
 }
@@ -73,19 +76,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return readSearchEngineFromStorage();
   });
   const [currentWeather, setCurrentWeather] = useState<WeatherInfo | null>(null);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
 
   // 刷新天气数据
   const refreshWeather = useCallback(async () => {
     try {
       const data = await getWeather(weatherLocation.city, weatherLocation.province);
-      setCurrentWeather(data);
+      if (data.error || (data.code !== undefined && data.code !== 200)) {
+        setWeatherError(data.error || '天气数据获取失败');
+        setCurrentWeather(null);
+      } else {
+        setWeatherError(null);
+        setCurrentWeather(data);
+      }
     } catch (err) {
       console.error('Failed to fetch weather', err);
-      setCurrentWeather({
-        weather1: '晴',
-        temperature: 22,
-        place: weatherLocation.city,
-      });
+      setWeatherError('无法连接天气服务');
+      setCurrentWeather(null);
     }
   }, [weatherLocation.city, weatherLocation.province]);
 
@@ -305,6 +312,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isAdmin,
         isLoading,
         teams,
+        setTeams,
         currentTeam,
         currentProject,
         guestNavUserId,
@@ -322,6 +330,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         searchEngine,
         setSearchEngine,
         currentWeather,
+        weatherError,
         refreshWeather,
       }}
     >

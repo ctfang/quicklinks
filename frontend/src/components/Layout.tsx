@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Settings as SettingsIcon, LogIn, LogOut, BookOpen, CloudRain, CloudSun, Cloud, Sun, CloudSnow, CloudLightning, ChevronDown, Home, Github } from 'lucide-react';
+import { Settings as SettingsIcon, LogIn, LogOut, BookOpen, CloudRain, CloudSun, Cloud, Sun, CloudSnow, CloudLightning, ChevronDown, Home, Github, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AuthModal } from './AuthModal';
 import { Settings } from '../pages/Settings';
@@ -21,7 +21,7 @@ const WeatherIcon = ({ weather }: { weather: string }) => {
 };
 
 export const Layout = () => {
-  const { user, logoutUser, currentTeam, teams, setCurrentTeam, setIsSettingsOpen, currentWeather, weatherLocation } =
+  const { user, logoutUser, currentTeam, teams, setCurrentTeam, setIsSettingsOpen, currentWeather, weatherError, weatherLocation } =
     useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
@@ -114,14 +114,23 @@ export const Layout = () => {
             type="button"
             onClick={() => setShowWeatherLocationModal(true)}
             className="hidden sm:flex items-center gap-2 text-sm font-medium drop-shadow-md mr-4 hover:bg-white/10 px-3 py-2 rounded-full transition-colors cursor-pointer border-0 bg-transparent text-white"
-            title="点击修改天气城市"
+            title={weatherError || "点击修改天气城市"}
           >
-            <WeatherIcon weather={weatherWidget?.weather1 || '晴'} />
-            <span>
-              {weatherWidget
-                ? `${Math.round(weatherWidget.temperature)}°C ${weatherWidget.place}`
-                : `22°C ${weatherLocation.city}`}
-            </span>
+            {weatherError ? (
+              <span className="text-yellow-300/80 text-xs flex items-center gap-1">
+                <AlertTriangle size={14} />
+                <span>天气不可用</span>
+              </span>
+            ) : (
+              <>
+                <WeatherIcon weather={weatherWidget?.weather1 || '晴'} />
+                <span>
+                  {weatherWidget
+                    ? `${Math.round(weatherWidget.temperature)}°C ${weatherWidget.place}`
+                    : `22°C ${weatherLocation.city}`}
+                </span>
+              </>
+            )}
           </button>
 
           {user ? (

@@ -80,7 +80,7 @@ func (k *Kernel) Exit() {}
 func setEmbeddedCacheHeaders(c *gin.Context, urlPath string) {
 	lower := strings.ToLower(urlPath)
 	if strings.HasSuffix(lower, ".html") {
-		c.Header("Cache-Control", "no-cache")
+		c.Header("Cache-Control", "public, max-age=3000")
 		return
 	}
 	switch strings.ToLower(filepath.Ext(urlPath)) {

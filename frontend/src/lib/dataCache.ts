@@ -357,7 +357,7 @@ export function removeProjectFromCache(teamId: string, projectId: string): void 
 /**
  * 更新链接顺序到缓存
  */
-export function updateLinksOrderInCache(context: { userId?: number; teamId?: string }, updates: { id: string; order: number }[]): void {
+export function updateLinksOrderInCache(context: { userId?: number; teamId?: string }, updates: { id: string; order: number; rowNum?: number }[]): void {
   const cached = getCachedLinks(context);
   if (!cached) return;
   
@@ -365,6 +365,9 @@ export function updateLinksOrderInCache(context: { userId?: number; teamId?: str
     const link = cached.find(l => l.id === update.id);
     if (link) {
       link.order = update.order;
+      if (update.rowNum !== undefined) {
+        link.rowNum = update.rowNum;
+      }
     }
   });
   

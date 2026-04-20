@@ -20,7 +20,7 @@ build-backend:
 
 build-linux: build-frontend
 	# 前端已直接构建到 backend/dist，go:embed dist 可以正确打包
-	# cd backend && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../app .
+	# GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o ./app/app ./
 	cd backend && $env:GOOS="linux"; $env:GOARCH="amd64"; $env:CGO_ENABLED="0"; go build -ldflags="-s -w" -o ./app .
 
 docker:

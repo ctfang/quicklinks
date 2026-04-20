@@ -61,6 +61,7 @@ export interface NavLink {
   groupId?: string;
   displaySize?: 'icon' | 'small' | 'medium' | 'large' | 'list';
   order?: number;
+  rowNum?: number;
   bgColor?: string | null;
 }
 
@@ -285,12 +286,12 @@ export const deleteLinkWithCache = async (id: string, context: { userId?: number
 };
 
 /** 批量更新链接顺序（更新缓存） */
-export const updateLinksOrderWithCache = async (links: { id: string; order: number }[], context: { userId?: number; teamId?: string }): Promise<void> => {
+export const updateLinksOrderWithCache = async (links: { id: string; order: number; rowNum?: number }[], context: { userId?: number; teamId?: string }): Promise<void> => {
   // 使用 Promise.all 并行更新所有链接的顺序
   await Promise.all(
     links.map(link => fetchApi(`/links/${link.id}`, {
       method: 'PUT',
-      body: JSON.stringify({ order: link.order }),
+      body: JSON.stringify({ order: link.order, rowNum: link.rowNum }),
     }))
   );
   // 更新缓存
@@ -585,6 +586,7 @@ export interface WeatherInfo {
   place: string;
   humidity?: number;
   wind?: string;
+  error?: string;
 }
 
 export const getWeather = async (city = '深圳', province = '广东'): Promise<WeatherInfo> => {

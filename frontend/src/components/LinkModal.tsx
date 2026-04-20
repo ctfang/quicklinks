@@ -7,7 +7,7 @@ interface LinkModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (link: Partial<NavLink>) => Promise<void>;
-  initialData?: NavLink | null;
+  initialData?: Partial<NavLink> | null;
   groups?: NavGroup[];
 }
 
@@ -15,7 +15,7 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }:
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [icon, setIcon] = useState('');
-  const [displaySize, setDisplaySize] = useState<NavLink['displaySize']>('icon');
+  const [displaySize, setDisplaySize] = useState<NavLink['displaySize']>('small');
   const [groupId, setGroupId] = useState<string>('');
   const [bgColor, setBgColor] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -79,10 +79,10 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }:
 
   useEffect(() => {
     if (initialData) {
-      setTitle(initialData.title);
-      setUrl(initialData.url);
+      setTitle(initialData.title || '');
+      setUrl(initialData.url || '');
       setIcon(initialData.icon || '');
-      setDisplaySize(initialData.displaySize || 'medium');
+      setDisplaySize(initialData.displaySize || 'small');
       setGroupId(initialData.groupId || '');
       setBgColor(initialData.bgColor || '');
       // 判断当前图标是预设图标还是URL
@@ -92,7 +92,7 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }:
       setTitle('');
       setUrl('');
       setIcon('');
-      setDisplaySize('icon');
+      setDisplaySize('small');
       setGroupId('');
       setBgColor('');
       setIconMode('preset');
@@ -103,7 +103,7 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const u = url.trim();
+    const u = (url || '').trim();
     if (!u) return;
     setIsLoading(true);
     try {
@@ -114,9 +114,9 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }:
         // 显式发送 null 来清除背景色，undefined 会被 JSON.stringify 忽略
         bgColor: bgColor || null,
       };
-      const t = title.trim();
+      const t = (title || '').trim();
       if (t) payload.title = t;
-      const ic = icon.trim();
+      const ic = (icon || '').trim();
       if (ic) payload.icon = ic;
       await onSave(payload);
       onClose();

@@ -67,6 +67,7 @@ type Link struct {
 	DisplaySize *string `gorm:"column:displaySize;type:varchar(32)"`
 	OrderNum    int     `gorm:"column:order_num;default:100"`
 	BgColor     *string `gorm:"column:bgColor;type:varchar(32)"`
+	RowNum      int     `gorm:"column:row_num;default:0"`
 }
 
 func (Link) TableName() string { return "links" }

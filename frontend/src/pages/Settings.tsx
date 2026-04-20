@@ -12,7 +12,9 @@ export const Settings = () => {
   const {
     user,
     teams,
-    loginUser,
+    setTeams,
+    currentTeam,
+    setCurrentTeam,
     isEditMode,
     setIsEditMode,
     isSettingsOpen,
@@ -103,8 +105,8 @@ export const Settings = () => {
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (user && newTeamName) {
-      await createTeam(newTeamName, newTeamDesc, user.id);
-      await loginUser(user); // Refresh teams
+      const newTeam = await createTeam(newTeamName, newTeamDesc, user.id);
+      setTeams(prev => [...prev, newTeam]);
       setIsCreatingTeam(false);
       setNewTeamName('');
       setNewTeamDesc('');
@@ -114,8 +116,12 @@ export const Settings = () => {
   const handleUpdateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (user && editingTeamId && editTeamName) {
-      await updateTeam(editingTeamId, { name: editTeamName, description: editTeamDesc });
-      await loginUser(user); // Refresh teams
+      const updatedTeam = await updateTeam(editingTeamId, { name: editTeamName, description: editTeamDesc });
+      setTeams(prev => prev.map(t => t.id === editingTeamId ? updatedTeam : t));
+      // 如果当前选中的团队被编辑了，也更新 currentTeam
+      if (currentTeam && currentTeam.id === editingTeamId) {
+        setCurrentTeam(updatedTeam);
+      }
       setEditingTeamId(null);
     }
   };
@@ -127,8 +133,11 @@ export const Settings = () => {
       message: '确定要删除这个团队吗？此操作不可恢复，且会删除团队下的所有项目和链接。',
       onConfirm: async () => {
         await deleteTeam(teamId);
-        if (user) {
-          await loginUser(user); // Refresh teams
+        setTeams(prev => prev.filter(t => t.id !== teamId));
+        // 如果删除的是当前选中的团队，切换到其他团队或设为 null
+        if (currentTeam && currentTeam.id === teamId) {
+          const remainingTeams = teams.filter(t => t.id !== teamId);
+          setCurrentTeam(remainingTeams.length > 0 ? remainingTeams[0] : null);
         }
       }
     });

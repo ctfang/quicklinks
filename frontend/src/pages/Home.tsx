@@ -42,6 +42,7 @@ export const Home = () => {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<NavLink | null>(null);
   const [addingToProjectId, setAddingToProjectId] = useState<string | undefined>(undefined);
+  const [addingToGroupId, setAddingToGroupId] = useState<string | undefined>(undefined);
 
   // Project Modal State
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -153,15 +154,17 @@ export const Home = () => {
   }, [user, currentTeam]);
 
   // --- Link Handlers ---
-  const handleAddLink = (projectId?: string) => {
+  const handleAddLink = (projectId?: string, groupId?: string) => {
     setEditingLink(null);
     setAddingToProjectId(projectId);
+    setAddingToGroupId(groupId);
     setIsLinkModalOpen(true);
   };
 
   const handleEditLink = (link: NavLink) => {
     setEditingLink(link);
     setAddingToProjectId(link.projectId);
+    setAddingToGroupId(undefined);
     setIsLinkModalOpen(true);
   };
 
@@ -231,19 +234,25 @@ export const Home = () => {
       onConfirm: async () => {
         if (currentTeam) {
           await deleteProjectWithCache(id, currentTeam.id);
+          // 更新本地状态以移除被删除的项目
+          setProjects(prevProjects => prevProjects.filter(p => p.id !== id));
         }
-        // 不需要重新获取数据，缓存已更新
       }
     });
   };
 
   const handleSaveProject = async (name: string, description: string) => {
     if (editingProject && currentTeam) {
-      await updateProjectWithCache(editingProject.id, { name, description }, currentTeam.id);
+      const updatedProject = await updateProjectWithCache(editingProject.id, { name, description }, currentTeam.id);
+      // 更新本地状态以反映修改
+      setProjects(prevProjects =>
+        prevProjects.map(p => p.id === editingProject.id ? updatedProject : p)
+      );
     } else if (currentTeam) {
-      await addProjectWithCache(currentTeam.id, name, description);
+      const createdProject = await addProjectWithCache(currentTeam.id, name, description);
+      // 添加新项目到本地状态
+      setProjects(prevProjects => [...prevProjects, createdProject]);
     }
-    // 不需要重新获取数据，缓存已更新
   };
 
   // --- Group Handlers ---
@@ -260,19 +269,25 @@ export const Home = () => {
 
   const handleSaveGroup = async (name: string, order: number) => {
     const context = currentTeam ? { teamId: currentTeam.id } : user ? { userId: user.id } : {};
-    
+
     if (editingGroup) {
-      await updateGroupWithCache(editingGroup.id, { name, order }, context);
+      const updatedGroup = await updateGroupWithCache(editingGroup.id, { name, order }, context);
+      // 更新本地状态以反映修改，并按 order 排序
+      setGroups(prevGroups => {
+        const updated = prevGroups.map(g => g.id === editingGroup.id ? updatedGroup : g);
+        return updated.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      });
     } else {
-      await addGroupWithCache({
+      const createdGroup = await addGroupWithCache({
         name,
         userId: currentTeam ? undefined : user?.id,
         teamId: currentTeam ? currentTeam.id : undefined,
         projectId: addingGroupToProjectId,
         order
       }, context);
+      // 添加新分组到本地状态，并按 order 排序
+      setGroups(prevGroups => [...prevGroups, createdGroup].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
     }
-    // 不需要重新获取数据，缓存已更新
   };
 
   const handleDeleteGroup = async (id: string) => {
@@ -283,37 +298,33 @@ export const Home = () => {
       onConfirm: async () => {
         const context = currentTeam ? { teamId: currentTeam.id } : user ? { userId: user.id } : {};
         await deleteGroupWithCache(id, context);
-        // 不需要重新获取数据，缓存已更新
+        // 更新本地状态以移除被删除的分组
+        setGroups(prevGroups => prevGroups.filter(g => g.id !== id));
       }
     });
   };
 
   // 处理链接重新排序
   const handleReorderLinks = async (groupId: string | undefined, reorderedLinks: NavLink[]) => {
-    // 构建更新数据，只更新 order 字段
-    const updates = reorderedLinks.map((link, index) => ({
-      id: link.id,
-      order: index,
-    }));
+    const context = currentTeam ? { teamId: currentTeam.id } : user ? { userId: user.id } : {};
     
+    // 构建更新数据：包含 order 和 rowNum
+    const updates = reorderedLinks.map(link => ({
+      id: link.id,
+      order: link.order ?? 0,
+      rowNum: link.rowNum ?? 0,
+    }));
+
+    // 乐观更新本地状态
+    setLinks(prev => prev.map(l => {
+      const update = updates.find(u => u.id === l.id);
+      return update ? { ...l, order: update.order, rowNum: update.rowNum } : l;
+    }));
+
     try {
-      const context = currentTeam ? { teamId: currentTeam.id } : user ? { userId: user.id } : {};
       await updateLinksOrderWithCache(updates, context);
-      // 缓存已更新，同时更新本地状态以反映新的顺序
-      setLinks(prevLinks => {
-        const newLinks = [...prevLinks];
-        // 更新被重新排序的链接的 order 值
-        reorderedLinks.forEach((link, index) => {
-          const existingIndex = newLinks.findIndex(l => l.id === link.id);
-          if (existingIndex !== -1) {
-            newLinks[existingIndex] = { ...newLinks[existingIndex], order: index };
-          }
-        });
-        return newLinks;
-      });
     } catch (err) {
       console.error('Failed to reorder links:', err);
-      // 如果保存失败，重新获取数据
       fetchLinksAndProjects({ forceRefresh: true });
     }
   };
@@ -323,8 +334,10 @@ export const Home = () => {
   const generalGroups = groups.filter(g => !g.projectId);
 
   const renderGroupedLinks = (targetLinks: NavLink[], targetGroups: NavGroup[], projectId?: string, defaultTitle?: string) => {
+    // 按 order 排序分组
+    const sortedGroups = [...targetGroups].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     const groupedLinks = new Map<string, NavLink[]>();
-    targetGroups.forEach(g => groupedLinks.set(g.id, []));
+    sortedGroups.forEach(g => groupedLinks.set(g.id, []));
     groupedLinks.set('ungrouped', []);
 
     // 按 order 排序后再分组
@@ -339,26 +352,20 @@ export const Home = () => {
 
     return (
       <div className="space-y-6 w-full">
-        {targetGroups.map(group => (
+        {sortedGroups.map(group => (
           <div key={group.id} className="relative group/section">
-            {isEditMode && (
-              <div className="absolute -left-10 top-0 opacity-0 group-hover/section:opacity-100 transition-opacity flex flex-col gap-1">
-                <button onClick={() => handleEditGroup(group)} className="p-1.5 text-white/50 hover:text-white bg-white/5 hover:bg-white/20 rounded-lg"><Edit2 size={14} /></button>
-                <button onClick={() => handleDeleteGroup(group.id)} className="p-1.5 text-red-400/50 hover:text-red-400 bg-white/5 hover:bg-red-400/20 rounded-lg"><Trash2 size={14} /></button>
-              </div>
-            )}
             <LinkGrid 
               links={groupedLinks.get(group.id)!} 
               title={group.name}
               showActions={isEditMode}
               groupId={group.id}
-              onAdd={() => {
-                setEditingLink(null);
-                setAddingToProjectId(projectId);
-                // We need a way to set initial group id in LinkModal. For now, we just open modal.
-                // The user can select the group in the modal.
-                setIsLinkModalOpen(true);
-              }}
+              groupActions={isEditMode ? (
+                <div className="flex gap-1 ml-2 shrink-0">
+                  <button onClick={() => handleEditGroup(group)} className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"><Edit2 size={14} /></button>
+                  <button onClick={() => handleDeleteGroup(group.id)} className="p-1.5 text-red-400/50 hover:text-red-400 hover:bg-red-400/20 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                </div>
+              ) : undefined}
+              onAdd={() => handleAddLink(projectId, group.id)}
               onEdit={handleEditLink}
               onDelete={handleDeleteLink}
               onReorder={isEditMode ? handleReorderLinks : undefined}
@@ -490,9 +497,12 @@ export const Home = () => {
 
       <LinkModal 
         isOpen={isLinkModalOpen}
-        onClose={() => setIsLinkModalOpen(false)}
+        onClose={() => {
+          setIsLinkModalOpen(false);
+          setAddingToGroupId(undefined);
+        }}
         onSave={handleSaveLink}
-        initialData={editingLink || undefined}
+        initialData={editingLink || (addingToGroupId ? { groupId: addingToGroupId } : undefined)}
         groups={groups.filter(g => g.projectId === addingToProjectId)}
       />
 

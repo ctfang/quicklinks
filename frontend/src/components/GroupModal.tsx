@@ -23,6 +23,9 @@ export const GroupModal: React.FC<GroupModalProps> = ({
     if (isOpen) {
       setName(initialData?.name || '');
       setOrder(initialData?.order ?? 0);
+    } else {
+      setName('');
+      setOrder(0);
     }
   }, [isOpen, initialData]);
 

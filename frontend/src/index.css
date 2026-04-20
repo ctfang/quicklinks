@@ -21,6 +21,7 @@
   --animate-spin-slow: spin 10s linear infinite;
   --animate-pulse-slow: pulse 4s ease-in-out infinite;
   --animate-flash: flash 3s ease-in-out infinite;
+  --animate-cloud-breathe: cloud-breathe 8s ease-in-out infinite;
 
   @keyframes flash {
     0%, 90%, 100% { opacity: 0; }
@@ -29,8 +30,8 @@
   }
 
   @keyframes cloud {
-    0% { transform: translateX(-100%) }
-    100% { transform: translateX(100vw) }
+    0% { transform: translateX(-120%) }
+    100% { transform: translateX(calc(100vw + 120%)) }
   }
 
   @keyframes rain {
@@ -46,6 +47,11 @@
     50% { transform: translateY(50vh) translateX(20px); }
     80% { opacity: 1; }
     100% { transform: translateY(100vh) translateX(-20px); opacity: 0; }
+  }
+
+  @keyframes cloud-breathe {
+    0%, 100% { transform: scaleY(1) scaleX(1); }
+    50% { transform: scaleY(1.02) scaleX(1.01); }
   }
 }
 
