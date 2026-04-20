@@ -191,13 +191,26 @@ export const Layout = () => {
         <Outlet />
       </main>
 
-      {/* Footer with GitHub repo link */}
-      <footer className="absolute bottom-0 w-full p-6 flex justify-end items-end z-10 text-xs font-medium text-white/70 drop-shadow-md pointer-events-none">
+      {/* Footer: ICP filing (homepage) + GitHub */}
+      <footer className="absolute bottom-0 w-full p-6 flex justify-between items-end z-10 text-xs font-medium text-white/70 drop-shadow-md pointer-events-none">
+        {location.pathname === '/' && (
+          <a
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pointer-events-auto hover:text-white transition-colors"
+          >
+            粤ICP备2025373248号-1
+          </a>
+        )}
         <a
           href="https://github.com/ctfang/quicklinks"
           target="_blank"
           rel="noopener noreferrer"
-          className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 hover:bg-white/20 hover:text-white transition-all"
+          className={cn(
+            'pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 hover:bg-white/20 hover:text-white transition-all',
+            location.pathname !== '/' && 'ml-auto'
+          )}
         >
           <Github size={16} />
           <span>GitHub</span>
