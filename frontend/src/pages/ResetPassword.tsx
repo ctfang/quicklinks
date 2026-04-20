@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { confirmPasswordReset, requestPasswordReset } from '../services/api';
-import { sha256Hex } from '../lib/passwordHash';
+import { md5Hex } from '../lib/passwordHash';
 import { Lock, ArrowLeft, Mail, KeyRound } from 'lucide-react';
 
 export const ResetPassword = () => {
@@ -67,7 +67,7 @@ export const ResetPassword = () => {
     }
     setLoading(true);
     try {
-      const pwdHash = await sha256Hex(password);
+      const pwdHash = md5Hex(password);
       await confirmPasswordReset(em, code.trim(), pwdHash);
       setDone(true);
     } catch (err: unknown) {

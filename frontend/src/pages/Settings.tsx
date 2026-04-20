@@ -1,16 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { getUserWidgets, updateWidgetConfig, WidgetConfig, getTeamMembers, createTeam, updateTeam, deleteTeam, addTeamMember, removeTeamMember, TeamMember, changePassword } from '../services/api';
-import { Save, User as UserIcon, LayoutDashboard, Users, Plus, X, UserPlus, Trash2, Edit2, Lock, Eye, EyeOff } from 'lucide-react';
-import { sha256Hex } from '../lib/passwordHash';
+import { clearAllNavCache } from '../lib/dataCache';
+import { Save, User as UserIcon, LayoutDashboard, Users, Plus, X, UserPlus, Trash2, Edit2, Lock, Eye, EyeOff, Search, Cloud, Shield, RefreshCw, AlertCircle } from 'lucide-react';
+import { md5Hex } from '../lib/passwordHash';
 import { cn } from '../lib/utils';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { SEARCH_ENGINES, SearchEngine } from '../lib/searchEngine';
 
 export const Settings = () => {
-  const { user, teams, loginUser, isEditMode, setIsEditMode, isSettingsOpen, setIsSettingsOpen, isAdmin } = useAppContext();
+  const {
+    user,
+    teams,
+    loginUser,
+    isEditMode,
+    setIsEditMode,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    isAdmin,
+    weatherLocation,
+    setWeatherLocation,
+    searchEngine,
+    setSearchEngine,
+  } = useAppContext();
   const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'widgets' | 'teams'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'widgets' | 'teams' | 'search' | 'weather' | 'security' | 'sync'>('profile');
 
   // Team Management State
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -34,6 +49,12 @@ export const Settings = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [weatherProvinceDraft, setWeatherProvinceDraft] = useState(weatherLocation.province);
+  const [weatherCityDraft, setWeatherCityDraft] = useState(weatherLocation.city);
+
+  // Cache Refresh State
+  const [isRefreshingCache, setIsRefreshingCache] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState('');
 
   // Confirm Modal State
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -53,6 +74,13 @@ export const Settings = () => {
       getUserWidgets(user.id).then(setWidgets);
     }
   }, [user, isSettingsOpen]);
+
+  useEffect(() => {
+    if (isSettingsOpen) {
+      setWeatherProvinceDraft(weatherLocation.province);
+      setWeatherCityDraft(weatherLocation.city);
+    }
+  }, [isSettingsOpen, weatherLocation.province, weatherLocation.city]);
 
   useEffect(() => {
     if (selectedTeamId && isSettingsOpen) {
@@ -150,8 +178,8 @@ export const Settings = () => {
     }
 
     try {
-      const oldHash = await sha256Hex(oldPassword);
-      const newHash = await sha256Hex(newPassword);
+      const oldHash = md5Hex(oldPassword);
+      const newHash = md5Hex(newPassword);
       await changePassword(oldHash, newHash);
       setPasswordSuccess('密码修改成功');
       setOldPassword('');
@@ -173,6 +201,28 @@ export const Settings = () => {
     setConfirmPassword('');
     setPasswordError('');
     setPasswordSuccess('');
+  };
+
+  // 处理刷新缓存
+  const handleRefreshCache = async () => {
+    setIsRefreshingCache(true);
+    setRefreshMessage('');
+    
+    try {
+      // 清除所有导航缓存
+      clearAllNavCache();
+      
+      // 刷新页面以重新加载数据
+      setRefreshMessage('缓存已清除，正在刷新页面...');
+      
+      // 延迟一下让用户看到提示
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err) {
+      setRefreshMessage('刷新失败，请重试');
+      setIsRefreshingCache(false);
+    }
   };
 
   if (!isSettingsOpen) return null;
@@ -216,21 +266,49 @@ export const Settings = () => {
             {/* Sidebar */}
             <div className="w-full md:w-64 flex-shrink-0">
               <nav className="flex flex-col gap-2">
-            <button 
+            <button
               onClick={() => { setActiveTab('profile'); setSelectedTeamId(null); }}
               className={cn("flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium", activeTab === 'profile' ? "bg-white/20 text-white shadow-sm" : "text-white/70 hover:bg-white/10 hover:text-white")}
             >
               <UserIcon size={18} />
               个人资料
             </button>
-            <button 
+            <button
+              onClick={() => { setActiveTab('search'); setSelectedTeamId(null); }}
+              className={cn("flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium", activeTab === 'search' ? "bg-white/20 text-white shadow-sm" : "text-white/70 hover:bg-white/10 hover:text-white")}
+            >
+              <Search size={18} />
+              搜索引擎
+            </button>
+            <button
+              onClick={() => { setActiveTab('weather'); setSelectedTeamId(null); }}
+              className={cn("flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium", activeTab === 'weather' ? "bg-white/20 text-white shadow-sm" : "text-white/70 hover:bg-white/10 hover:text-white")}
+            >
+              <Cloud size={18} />
+              天气城市
+            </button>
+            <button
+              onClick={() => { setActiveTab('security'); setSelectedTeamId(null); }}
+              className={cn("flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium", activeTab === 'security' ? "bg-white/20 text-white shadow-sm" : "text-white/70 hover:bg-white/10 hover:text-white")}
+            >
+              <Shield size={18} />
+              安全设置
+            </button>
+            <button
+              onClick={() => { setActiveTab('sync'); setSelectedTeamId(null); }}
+              className={cn("flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium", activeTab === 'sync' ? "bg-white/20 text-white shadow-sm" : "text-white/70 hover:bg-white/10 hover:text-white")}
+            >
+              <RefreshCw size={18} />
+              数据同步
+            </button>
+            <button
               onClick={() => { setActiveTab('widgets'); setSelectedTeamId(null); }}
               className={cn("flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium", activeTab === 'widgets' ? "bg-white/20 text-white shadow-sm" : "text-white/70 hover:bg-white/10 hover:text-white")}
             >
               <LayoutDashboard size={18} />
               小组件设置
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('teams')}
               className={cn("flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium", activeTab === 'teams' ? "bg-white/20 text-white shadow-sm" : "text-white/70 hover:bg-white/10 hover:text-white")}
             >
@@ -279,9 +357,9 @@ export const Settings = () => {
                     </p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
                       checked={isEditMode}
                       onChange={(e) => setIsEditMode(e.target.checked)}
                     />
@@ -289,9 +367,175 @@ export const Settings = () => {
                   </label>
                 </div>
               </div>
+            </div>
+          )}
 
+          {activeTab === 'search' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <h2 className="text-xl font-medium">搜索引擎</h2>
+              </div>
+              <p className="text-sm text-white/60">
+                选择默认的搜索引擎，将用于首页搜索栏的网页搜索功能。
+              </p>
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3 max-w-md">
+                {SEARCH_ENGINES.map((engine) => (
+                  <label
+                    key={engine.id}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors",
+                      searchEngine.id === engine.id
+                        ? "bg-blue-500/20 border border-blue-500/30"
+                        : "bg-white/5 border border-white/10 hover:bg-white/10"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="searchEngine"
+                      value={engine.id}
+                      checked={searchEngine.id === engine.id}
+                      onChange={() => setSearchEngine(engine)}
+                      className="sr-only"
+                    />
+                    <img
+                      src={engine.icon}
+                      alt={engine.name}
+                      className="w-5 h-5"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <span className="flex-1 text-white">{engine.name}</span>
+                    {searchEngine.id === engine.id && (
+                      <div className="w-2 h-2 rounded-full bg-blue-400" />
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'weather' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <h2 className="text-xl font-medium">天气城市</h2>
+              </div>
+              <p className="text-sm text-white/60">
+                默认广东 / 深圳；可改为其他城市，将保存在本浏览器并用于顶部天气与背景。
+              </p>
+              <form
+                className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-4 max-w-md"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setWeatherLocation({
+                    province: weatherProvinceDraft,
+                    city: weatherCityDraft,
+                  });
+                }}
+              >
+                <div>
+                  <label htmlFor="settings-weather-province" className="block text-sm text-white/80 mb-1">
+                    省份
+                  </label>
+                  <input
+                    id="settings-weather-province"
+                    type="text"
+                    value={weatherProvinceDraft}
+                    onChange={(e) => setWeatherProvinceDraft(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    placeholder="广东"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="settings-weather-city" className="block text-sm text-white/80 mb-1">
+                    城市
+                  </label>
+                  <input
+                    id="settings-weather-city"
+                    type="text"
+                    value={weatherCityDraft}
+                    onChange={(e) => setWeatherCityDraft(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    placeholder="深圳"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-full text-sm font-medium transition-colors"
+                >
+                  保存天气城市
+                </button>
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'sync' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <h2 className="text-xl font-medium">数据同步</h2>
+              </div>
+              
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex gap-3">
+                <AlertCircle size={20} className="text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-200/80">
+                  <p className="font-medium text-amber-200 mb-1">多设备同步提示</p>
+                  <p>如果您在多台电脑登录同一账号，本地缓存可能导致数据不同步。当其他设备添加了新的导航链接或分组时，您需要点击下方的「刷新缓存」按钮才能看到最新数据。</p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-blue-500/20 rounded-xl">
+                    <RefreshCw size={24} className="text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-white">刷新本地缓存</h3>
+                    <p className="text-sm text-white/60 mt-1">
+                      清除本地缓存并从服务器重新获取最新数据。适用于：
+                    </p>
+                    <ul className="text-sm text-white/60 mt-2 space-y-1 list-disc list-inside">
+                      <li>在其他设备上添加了新的导航链接</li>
+                      <li>分组顺序或链接排序发生变化</li>
+                      <li>发现数据显示异常或缺失</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {refreshMessage && (
+                  <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-200 text-sm">
+                    {refreshMessage}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleRefreshCache}
+                  disabled={isRefreshingCache}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white px-5 py-3 rounded-xl font-medium transition-colors"
+                >
+                  <RefreshCw size={18} className={isRefreshingCache ? 'animate-spin' : ''} />
+                  {isRefreshingCache ? '刷新中...' : '刷新缓存'}
+                </button>
+              </div>
+
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                <h3 className="font-medium text-white mb-3">缓存工作原理</h3>
+                <div className="space-y-2 text-sm text-white/60">
+                  <p>1. 登录后，您的导航数据会自动缓存到浏览器本地存储</p>
+                  <p>2. 下次访问时，优先从缓存加载，页面展示更快</p>
+                  <p>3. 后台会自动同步服务器最新数据</p>
+                  <p>4. 缓存有效期为 24 小时，过期后会自动重新获取</p>
+                  <p>5. 登出时会自动清除当前用户的缓存数据</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'security' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <h2 className="text-xl font-medium">安全设置</h2>
+              </div>
               <div>
-                <h2 className="text-xl font-medium border-b border-white/10 pb-4 mb-6">安全设置</h2>
                 {!isChangingPassword ? (
                   <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
                     <div className="flex items-center gap-3">
@@ -311,7 +555,7 @@ export const Settings = () => {
                     </button>
                   </div>
                 ) : (
-                  <form onSubmit={handleChangePassword} className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4">
+                  <form onSubmit={handleChangePassword} className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4 max-w-md">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="p-2 bg-blue-500/20 rounded-lg">
                         <Lock size={20} className="text-blue-400" />

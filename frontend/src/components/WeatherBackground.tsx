@@ -1,39 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { cn } from '../lib/utils';
 import { Cloud, CloudRain, CloudSnow, Sun, CloudLightning, Moon } from 'lucide-react';
-import { getWeather, WeatherInfo } from '../services/api';
-
-interface WeatherData extends WeatherInfo {}
+import { useAppContext } from '../context/AppContext';
 
 export const WeatherBackground = () => {
-  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const { currentWeather } = useAppContext();
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  useEffect(() => {
-    // 从后端服务获取天气（带缓存，按时间+城市记录），避免直接调用第三方API导致的失败或灰蒙蒙蒙版
-    const fetchWeather = async () => {
-      try {
-        const data = await getWeather('深圳', '广东');
-        // 后端已保证返回有效数据（失败时fallback到默认晴天）
-        setWeather(data);
-      } catch (err) {
-        console.error('Failed to fetch weather', err);
-        // fallback
-        setWeather({
-          weather1: '晴',
-          temperature: 22,
-          place: '深圳',
-        });
-      }
-    };
-    fetchWeather();
-
-    // 每一分钟更新一次时间状态，触发太阳/月亮位置计算
+  // 每一分钟更新一次时间状态，触发太阳/月亮位置计算
+  React.useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  const weatherType = weather?.weather1 || '晴';
+  const weatherType = currentWeather?.weather1 || '晴';
 
   const isRain = weatherType.includes('雨');
   // 严格区分多云和阴天，阴天气压更低、云层更厚更暗

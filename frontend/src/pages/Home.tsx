@@ -3,7 +3,29 @@ import { SearchBar } from '../components/SearchBar';
 import { LinkGrid } from '../components/LinkGrid';
 import { ClockWidget } from '../components/Widgets';
 import { useAppContext } from '../context/AppContext';
-import { getPopularLinks, getPersonalLinks, getTeamLinks, NavLink, addLink, updateLink, deleteLink, getTeamProjects, Project, addProject, updateProject, deleteProject, NavGroup, getGroups, addGroup, updateGroup, deleteGroup, getGuestNavigation, updateLinksOrder } from '../services/api';
+import {
+  getPopularLinks,
+  NavLink,
+  Project,
+  NavGroup,
+  // 带缓存的 API
+  getGuestNavigation,
+  getPersonalLinksWithCache,
+  getTeamLinksWithCache,
+  getGroupsWithCache,
+  getTeamProjectsWithCache,
+  // 带缓存的数据变更操作
+  addLinkWithCache,
+  updateLinkWithCache,
+  deleteLinkWithCache,
+  addProjectWithCache,
+  updateProjectWithCache,
+  deleteProjectWithCache,
+  addGroupWithCache,
+  updateGroupWithCache,
+  deleteGroupWithCache,
+  updateLinksOrderWithCache,
+} from '../services/api';
 import { LinkModal } from '../components/LinkModal';
 import { ProjectModal } from '../components/ProjectModal';
 import { GroupModal } from '../components/GroupModal';
@@ -43,30 +65,82 @@ export const Home = () => {
     onConfirm: () => {}
   });
 
-  const fetchLinksAndProjects = async () => {
+  // 获取数据：缓存优先，无缓存才请求服务器
+  const fetchLinksAndProjects = async (options?: { forceRefresh?: boolean }) => {
+    const useCache = !options?.forceRefresh;
+    
     if (user) {
       if (currentTeam) {
-        // Show team links and projects
+        // 团队空间
+        const context = { teamId: currentTeam.id };
+        
+        if (useCache) {
+          // 尝试从缓存读取
+          const cachedLinks = await getTeamLinksWithCache(currentTeam.id, { useCache: true });
+          const cachedProjects = await getTeamProjectsWithCache(currentTeam.id, { useCache: true });
+          const cachedGroups = await getGroupsWithCache(context, { useCache: true });
+          
+          // 如果缓存存在，直接使用缓存，不请求服务器
+          if (cachedLinks && cachedProjects && cachedGroups) {
+            setLinks(cachedLinks);
+            setProjects(cachedProjects);
+            setGroups(cachedGroups);
+            return; // 有缓存，直接返回
+          }
+        }
+        
+        // 无缓存或强制刷新，请求服务器
         const [teamLinks, teamProjects, teamGroups] = await Promise.all([
-          getTeamLinks(currentTeam.id),
-          getTeamProjects(currentTeam.id),
-          getGroups({ teamId: currentTeam.id })
+          getTeamLinksWithCache(currentTeam.id, { useCache: false }),
+          getTeamProjectsWithCache(currentTeam.id, { useCache: false }),
+          getGroupsWithCache(context, { useCache: false })
         ]);
         setLinks(teamLinks);
         setProjects(teamProjects);
         setGroups(teamGroups);
       } else {
-        // Show personal links
+        // 个人空间
+        const context = { userId: user.id };
+        
+        if (useCache) {
+          // 尝试从缓存读取
+          const cachedLinks = await getPersonalLinksWithCache(user.id, { useCache: true });
+          const cachedGroups = await getGroupsWithCache(context, { useCache: true });
+          
+          // 如果缓存存在，直接使用缓存
+          if (cachedLinks && cachedGroups) {
+            setLinks(cachedLinks.length > 0 ? cachedLinks : await getPopularLinks());
+            setProjects([]);
+            setGroups(cachedGroups);
+            return; // 有缓存，直接返回
+          }
+        }
+        
+        // 无缓存或强制刷新，请求服务器
         const [personalLinks, personalGroups] = await Promise.all([
-          getPersonalLinks(user.id),
-          getGroups({ userId: user.id })
+          getPersonalLinksWithCache(user.id, { useCache: false }),
+          getGroupsWithCache(context, { useCache: false })
         ]);
         setLinks(personalLinks.length > 0 ? personalLinks : await getPopularLinks());
         setProjects([]);
         setGroups(personalGroups);
       }
     } else {
-      const guest = await getGuestNavigation();
+      // 访客模式
+      if (useCache) {
+        // 尝试从缓存读取
+        const cachedGuest = await getGuestNavigation({ useCache: true });
+        if (cachedGuest) {
+          setGuestNavUserId(cachedGuest.userId);
+          setLinks(cachedGuest.links);
+          setGroups(cachedGuest.groups);
+          setProjects([]);
+          return; // 有缓存，直接返回
+        }
+      }
+      
+      // 无缓存或强制刷新，请求服务器
+      const guest = await getGuestNavigation({ useCache: false });
       setGuestNavUserId(guest.userId);
       setLinks(guest.links);
       setGroups(guest.groups);
@@ -97,15 +171,33 @@ export const Home = () => {
       title: '删除导航链接',
       message: '确定要删除这个导航链接吗？',
       onConfirm: async () => {
-        await deleteLink(id);
-        fetchLinksAndProjects();
+        const context = currentTeam ? { teamId: currentTeam.id } : user ? { userId: user.id } : {};
+        await deleteLinkWithCache(id, context);
+        // 缓存已更新，同时更新本地状态以移除被删除的链接
+        setLinks(prevLinks => prevLinks.filter(link => link.id !== id));
       }
     });
   };
 
   const handleSaveLink = async (linkData: Partial<NavLink>) => {
+    const context = currentTeam ? { teamId: currentTeam.id } : user ? { userId: user.id } : {};
+    
     if (editingLink) {
-      await updateLink(editingLink.id, linkData);
+      const updatedLink = await updateLinkWithCache(editingLink.id, linkData, context);
+      // 更新本地状态以反映修改
+      setLinks(prevLinks => 
+        prevLinks.map(link => {
+          if (link.id === updatedLink.id) {
+            // 显式处理 bgColor，确保能正确清除背景色（处理 null 值）
+            const merged = { ...link, ...updatedLink };
+            if (updatedLink.bgColor === null) {
+              delete merged.bgColor;
+            }
+            return merged;
+          }
+          return link;
+        })
+      );
     } else {
       const newLink = {
         ...linkData,
@@ -114,9 +206,10 @@ export const Home = () => {
         teamId: currentTeam ? currentTeam.id : undefined,
         projectId: addingToProjectId
       } as Omit<NavLink, 'id' | 'clicks'>;
-      await addLink(newLink);
+      const createdLink = await addLinkWithCache(newLink, context);
+      // 添加新链接到本地状态
+      setLinks(prevLinks => [...prevLinks, createdLink]);
     }
-    fetchLinksAndProjects();
   };
 
   // --- Project Handlers ---
@@ -136,19 +229,21 @@ export const Home = () => {
       title: '删除项目',
       message: '确定要删除这个项目及其所有链接吗？此操作不可恢复。',
       onConfirm: async () => {
-        await deleteProject(id);
-        fetchLinksAndProjects();
+        if (currentTeam) {
+          await deleteProjectWithCache(id, currentTeam.id);
+        }
+        // 不需要重新获取数据，缓存已更新
       }
     });
   };
 
   const handleSaveProject = async (name: string, description: string) => {
-    if (editingProject) {
-      await updateProject(editingProject.id, { name, description });
+    if (editingProject && currentTeam) {
+      await updateProjectWithCache(editingProject.id, { name, description }, currentTeam.id);
     } else if (currentTeam) {
-      await addProject(currentTeam.id, name, description);
+      await addProjectWithCache(currentTeam.id, name, description);
     }
-    fetchLinksAndProjects();
+    // 不需要重新获取数据，缓存已更新
   };
 
   // --- Group Handlers ---
@@ -164,18 +259,20 @@ export const Home = () => {
   };
 
   const handleSaveGroup = async (name: string, order: number) => {
+    const context = currentTeam ? { teamId: currentTeam.id } : user ? { userId: user.id } : {};
+    
     if (editingGroup) {
-      await updateGroup(editingGroup.id, { name, order });
+      await updateGroupWithCache(editingGroup.id, { name, order }, context);
     } else {
-      await addGroup({
+      await addGroupWithCache({
         name,
         userId: currentTeam ? undefined : user?.id,
         teamId: currentTeam ? currentTeam.id : undefined,
         projectId: addingGroupToProjectId,
         order
-      });
+      }, context);
     }
-    fetchLinksAndProjects();
+    // 不需要重新获取数据，缓存已更新
   };
 
   const handleDeleteGroup = async (id: string) => {
@@ -184,8 +281,9 @@ export const Home = () => {
       title: '删除分组',
       message: '确定要删除这个分组吗？分组内的链接将变为未分组状态。',
       onConfirm: async () => {
-        await deleteGroup(id);
-        fetchLinksAndProjects();
+        const context = currentTeam ? { teamId: currentTeam.id } : user ? { userId: user.id } : {};
+        await deleteGroupWithCache(id, context);
+        // 不需要重新获取数据，缓存已更新
       }
     });
   };
@@ -199,8 +297,9 @@ export const Home = () => {
     }));
     
     try {
-      await updateLinksOrder(updates);
-      // 更新本地状态
+      const context = currentTeam ? { teamId: currentTeam.id } : user ? { userId: user.id } : {};
+      await updateLinksOrderWithCache(updates, context);
+      // 缓存已更新，同时更新本地状态以反映新的顺序
       setLinks(prevLinks => {
         const newLinks = [...prevLinks];
         // 更新被重新排序的链接的 order 值
@@ -215,7 +314,7 @@ export const Home = () => {
     } catch (err) {
       console.error('Failed to reorder links:', err);
       // 如果保存失败，重新获取数据
-      fetchLinksAndProjects();
+      fetchLinksAndProjects({ forceRefresh: true });
     }
   };
 
@@ -305,23 +404,13 @@ export const Home = () => {
           <SearchBar />
         </div>
         
-        <div className="w-full max-w-5xl">
+        <div className="w-full max-w-6xl">
           {currentTeam ? (
-            <div className="space-y-16 w-full">
-              {/* Team General Links */}
+            <div className="space-y-12 w-full">
+              {/* Team Projects - 优先显示 */}
               <div>
-                <h2 className="text-xl font-medium text-white mb-6">团队公共导航</h2>
-                {renderGroupedLinks(generalLinks, generalGroups, undefined, "所有导航")}
-              </div>
-
-              {/* Team Projects */}
-              <div>
-                <div className="flex items-center justify-between mb-6 px-2">
-                  <h2 className="text-xl font-medium text-white flex items-center gap-2">
-                    <FolderKanban size={20} className="text-purple-400" />
-                    项目空间
-                  </h2>
-                  {isEditMode && (
+                {isEditMode && (
+                  <div className="flex justify-end mb-4 px-2">
                     <button 
                       onClick={handleAddProject}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/40 text-purple-100 text-sm rounded-full transition-colors backdrop-blur-md border border-purple-500/30"
@@ -329,44 +418,47 @@ export const Home = () => {
                       <Plus size={16} />
                       新建项目
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
                 
                 {projects.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-8">
+                  <div className="space-y-8">
                     {projects.map(project => {
                       const projectLinks = links.filter(l => l.projectId === project.id);
                       const projectGroups = groups.filter(g => g.projectId === project.id);
                       return (
-                        <div key={project.id} className="bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col">
-                          <div className="flex justify-between items-start mb-6 border-b border-white/10 pb-4">
-                            <div>
-                              <h3 className="text-lg font-semibold text-white">{project.name}</h3>
+                        <div key={project.id} className="w-full">
+                          <div className="flex justify-between items-start mb-4 px-1">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <FolderKanban size={18} className="text-purple-400" />
+                                {project.name}
+                              </h3>
                               {project.description && (
                                 <p className="text-sm text-white/60 mt-1">{project.description}</p>
                               )}
                             </div>
                             {isEditMode && (
-                              <div className="flex gap-1">
+                              <div className="flex gap-1 ml-2 shrink-0">
                                 <button 
                                   onClick={() => handleEditProject(project)}
                                   className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                                   title="编辑项目"
                                 >
-                                  <Edit2 size={16} />
+                                  <Edit2 size={14} />
                                 </button>
                                 <button 
                                   onClick={() => handleDeleteProject(project.id)}
                                   className="p-1.5 text-red-400/70 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                                   title="删除项目"
                                 >
-                                  <Trash2 size={16} />
+                                  <Trash2 size={14} />
                                 </button>
                               </div>
                             )}
                           </div>
                           
-                          <div className="flex-1">
+                          <div className="w-full">
                             {renderGroupedLinks(projectLinks, projectGroups, project.id, "项目导航")}
                           </div>
                         </div>
@@ -379,6 +471,12 @@ export const Home = () => {
                     <p>暂无项目，请在设置中开启"管理导航"后新建项目</p>
                   </div>
                 )}
+              </div>
+
+              {/* Team General Links */}
+              <div>
+                <h2 className="text-xl font-medium text-white mb-6">团队公共导航</h2>
+                {renderGroupedLinks(generalLinks, generalGroups, undefined, "所有导航")}
               </div>
             </div>
           ) : (

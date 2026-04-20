@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, Mail, Lock, User as UserIcon } from 'lucide-react';
 import { login, register, requestPasswordReset } from '../services/api';
 import { useAppContext } from '../context/AppContext';
-import { sha256Hex } from '../lib/passwordHash';
+import { md5Hex } from '../lib/passwordHash';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -33,12 +33,12 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
     try {
       if (mode === 'login') {
-        const pwdHash = await sha256Hex(password);
+        const pwdHash = md5Hex(password);
         const u = await login(email, pwdHash);
         await loginUser(u);
         onClose();
       } else if (mode === 'register') {
-        const pwdHash = await sha256Hex(password);
+        const pwdHash = md5Hex(password);
         const u = await register(name, email, pwdHash);
         await loginUser(u);
         onClose();

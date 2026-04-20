@@ -1,5 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User, Team, Project, logout, getUserTeams, getGuestNavigation, getMe } from '../services/api';
+import { User, Team, Project, logout, getUserTeamsWithCache, getGuestNavigation, getMe, getWeather, WeatherInfo } from '../services/api';
+import {
+  DEFAULT_WEATHER_LOCATION,
+  readWeatherLocationFromStorage,
+  writeWeatherLocationToStorage,
+  type WeatherLocation,
+} from '../lib/weatherLocation';
+import {
+  DEFAULT_SEARCH_ENGINE,
+  readSearchEngineFromStorage,
+  writeSearchEngineToStorage,
+  type SearchEngine,
+} from '../lib/searchEngine';
+import { clearUserCache, cacheCurrentUser, getCachedCurrentUser, clearCurrentUserCache } from '../lib/dataCache';
 
 // 本地存储键名
 const STORAGE_KEYS = {
@@ -28,6 +41,16 @@ interface AppContextType {
   logoutUser: () => Promise<void>;
   setCurrentTeam: (team: Team | null) => void;
   setCurrentProject: (project: Project | null) => void;
+  /** 天气展示用省、市，持久化在浏览器 localStorage，默认广东/深圳 */
+  weatherLocation: WeatherLocation;
+  setWeatherLocation: (loc: WeatherLocation) => void;
+  /** 搜索引擎设置，持久化在浏览器 localStorage，默认百度 */
+  searchEngine: SearchEngine;
+  setSearchEngine: (engine: SearchEngine) => void;
+  /** 当前天气数据，全局共享避免重复请求 */
+  currentWeather: WeatherInfo | null;
+  /** 刷新天气数据 */
+  refreshWeather: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -41,6 +64,49 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isEditMode, setIsEditModeState] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [guestNavUserId, setGuestNavUserId] = useState<number | null>(null);
+  const [weatherLocation, setWeatherLocationState] = useState<WeatherLocation>(() => {
+    if (typeof window === 'undefined') return { ...DEFAULT_WEATHER_LOCATION };
+    return readWeatherLocationFromStorage();
+  });
+  const [searchEngine, setSearchEngineState] = useState<SearchEngine>(() => {
+    if (typeof window === 'undefined') return DEFAULT_SEARCH_ENGINE;
+    return readSearchEngineFromStorage();
+  });
+  const [currentWeather, setCurrentWeather] = useState<WeatherInfo | null>(null);
+
+  // 刷新天气数据
+  const refreshWeather = useCallback(async () => {
+    try {
+      const data = await getWeather(weatherLocation.city, weatherLocation.province);
+      setCurrentWeather(data);
+    } catch (err) {
+      console.error('Failed to fetch weather', err);
+      setCurrentWeather({
+        weather1: '晴',
+        temperature: 22,
+        place: weatherLocation.city,
+      });
+    }
+  }, [weatherLocation.city, weatherLocation.province]);
+
+  // 天气位置变化时自动刷新天气
+  useEffect(() => {
+    refreshWeather();
+  }, [refreshWeather]);
+
+  const setWeatherLocation = useCallback((loc: WeatherLocation) => {
+    const province =
+      loc.province.trim() !== '' ? loc.province.trim() : DEFAULT_WEATHER_LOCATION.province;
+    const city = loc.city.trim() !== '' ? loc.city.trim() : DEFAULT_WEATHER_LOCATION.city;
+    const next = { province, city };
+    setWeatherLocationState(next);
+    writeWeatherLocationToStorage(next);
+  }, []);
+
+  const setSearchEngine = useCallback((engine: SearchEngine) => {
+    setSearchEngineState(engine);
+    writeSearchEngineToStorage(engine);
+  }, []);
 
   // 从 localStorage 读取保存的状态
   useEffect(() => {
@@ -78,18 +144,45 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const hydrateUser = useCallback(async (u: User) => {
+  const hydrateUser = useCallback(async (u: User, fromCache: boolean = false) => {
     setUser(u);
-    try {
-      localStorage.setItem(STORAGE_KEYS.SESSION_HINT, '1');
-    } catch {
-      // ignore
+    
+    // 缓存用户信息（如果是从服务器获取的）
+    if (!fromCache) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.SESSION_HINT, '1');
+        cacheCurrentUser(u);
+      } catch {
+        // ignore
+      }
     }
-    const [t, guest] = await Promise.all([getUserTeams(u.id), getGuestNavigation()]);
+    
+    // 缓存优先：尝试从缓存获取团队数据
+    const cachedTeams = await getUserTeamsWithCache(u.id, { useCache: true });
+    if (cachedTeams) {
+      setTeams(cachedTeams);
+      
+      // 恢复保存的团队选择状态
+      try {
+        const savedTeamId = localStorage.getItem(STORAGE_KEYS.CURRENT_TEAM_ID);
+        if (savedTeamId) {
+          const savedTeam = cachedTeams.find(team => team.id === savedTeamId);
+          if (savedTeam) {
+            setCurrentTeamState(savedTeam);
+          }
+        }
+      } catch {
+        // 忽略 localStorage 读取错误
+      }
+      return; // 有缓存，直接返回，不请求服务器
+    }
+    
+    // 无缓存，请求服务器
+    const [t, guest] = await Promise.all([getUserTeamsWithCache(u.id, { useCache: false }), getGuestNavigation()]);
     setTeams(t);
     setGuestNavUserId(guest.userId);
 
-    // 恢复保存的团队选择状态
+    // 恢复团队选择状态
     try {
       const savedTeamId = localStorage.getItem(STORAGE_KEYS.CURRENT_TEAM_ID);
       if (savedTeamId) {
@@ -115,16 +208,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
       try {
         if (hasSessionHint) {
+          // 缓存优先：先尝试从缓存获取用户信息
+          const cachedUser = getCachedCurrentUser();
+          if (cachedUser && !cancelled) {
+            // 使用缓存的用户信息，不请求 /api/auth/me
+            await hydrateUser(cachedUser, true);
+            return;
+          }
+          
+          // 无缓存，请求服务器
           const me = await getMe();
           if (!me) {
             try {
               localStorage.removeItem(STORAGE_KEYS.SESSION_HINT);
+              clearCurrentUserCache();
             } catch {
               // ignore
             }
           } else if (!cancelled) {
             try {
-              await hydrateUser(me);
+              await hydrateUser(me, false);
               return;
             } catch {
               if (!cancelled) {
@@ -159,6 +262,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const logoutUser = async () => {
     setIsLoading(true);
+    
+    // 清除用户相关缓存
+    if (user) {
+      clearUserCache(user.id);
+    }
+    clearCurrentUserCache();
+    
     await logout();
     try {
       localStorage.removeItem(STORAGE_KEYS.SESSION_HINT);
@@ -207,6 +317,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         logoutUser,
         setCurrentTeam,
         setCurrentProject,
+        weatherLocation,
+        setWeatherLocation,
+        searchEngine,
+        setSearchEngine,
+        currentWeather,
+        refreshWeather,
       }}
     >
       {children}

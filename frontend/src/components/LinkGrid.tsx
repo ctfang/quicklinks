@@ -170,7 +170,7 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
                 key={link.id} 
                 className={cn(
                   "relative group transition-all duration-300",
-                  size === 'icon' && "col-span-3 sm:col-span-2 md:col-span-1",
+                  size === 'icon' && "w-14 h-14 sm:w-16 sm:h-16 aspect-square",
                   size === 'small' && "col-span-6 sm:col-span-4 md:col-span-3 lg:col-span-2",
                   size === 'medium' && "col-span-6 sm:col-span-4 md:col-span-3 lg:col-span-2",
                   size === 'large' && "col-span-12 sm:col-span-6 md:col-span-4 lg:col-span-3",
@@ -190,21 +190,31 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
                   title={size === 'icon' ? link.title : undefined}
                   draggable={false}
                   className={cn(
-                    "flex items-center w-full h-full rounded-2xl bg-white/5 hover:bg-white/15 border border-white/5 hover:border-white/20 transition-all duration-300 overflow-hidden",
-                    size === 'icon' && "flex-col p-2 justify-center items-center w-12 h-12",
-                    size === 'small' && "flex-row px-3 py-2.5 gap-3 items-center",
-                    size === 'medium' && "flex-row px-3 py-2.5 gap-3 items-center justify-center",
-                    size === 'large' && "flex-row p-4 gap-4 items-center",
-                    size === 'list' && "flex-row px-4 py-3 gap-4 items-center justify-between"
+                    "flex items-center w-full h-full rounded-2xl transition-all duration-300 overflow-hidden p-3 shadow-sm",
+                    // 晴天背景下增强对比度：使用更深的背景色和更强的边框
+                    link.bgColor 
+                      ? "" // 自定义背景色时，由style处理
+                      : "bg-black/20 hover:bg-black/30 border border-white/10 hover:border-white/25 backdrop-blur-sm",
+                    size === 'icon' && "items-center justify-center",
+                    size === 'small' && "flex-row gap-3 items-center",
+                    size === 'medium' && "flex-row gap-3 items-center justify-center",
+                    size === 'large' && "flex-row gap-3 items-center",
+                    size === 'list' && "flex-row gap-3 items-center justify-between"
                   )}
+                  style={link.bgColor ? {
+                    backgroundColor: link.bgColor,
+                    border: '1px solid rgba(255,255,255,0.15)'
+                  } : undefined}
                 >
                   <div className={cn(
-                    "flex items-center justify-center text-white/80 group-hover:text-white transition-colors shrink-0",
-                    size === 'icon' && "w-8 h-8",
-                    size === 'small' && "w-8 h-8 rounded-lg bg-white/5",
-                    size === 'medium' && "w-8 h-8 rounded-lg bg-white/5",
-                    size === 'large' && "w-12 h-12 rounded-xl bg-white/10",
-                    size === 'list' && "w-10 h-10 rounded-xl bg-white/5"
+                    "flex items-center justify-center text-white/90 group-hover:text-white transition-colors shrink-0 rounded-lg",
+                    // 图标容器始终使用透明背景，避免与按钮背景产生视觉间隙
+                    "bg-transparent",
+                    size === 'icon' && "w-7 h-7",
+                    size === 'small' && "w-8 h-8",
+                    size === 'medium' && "w-8 h-8",
+                    size === 'large' && "w-12 h-12 rounded-xl",
+                    size === 'list' && "w-10 h-10"
                   )}>
                     <NavIcon
                       name={link.icon}
@@ -220,7 +230,7 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
                       size === 'list' && "flex-1"
                     )}>
                       <span className={cn(
-                        "font-medium text-white/90 group-hover:text-white truncate w-full transition-colors",
+                        "font-medium text-white truncate w-full transition-colors drop-shadow-sm",
                         size === 'small' && "text-xs",
                         size === 'large' && "text-base",
                         size === 'list' && "text-sm"
@@ -228,7 +238,7 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
                         {link.title}
                       </span>
                       {(size === 'large' || size === 'list') && (
-                        <span className="text-xs text-white/40 group-hover:text-white/60 truncate w-full mt-0.5 transition-colors">
+                        <span className="text-xs text-white/70 group-hover:text-white/90 truncate w-full mt-0.5 transition-colors drop-shadow-sm">
                           {link.url.replace(/^https?:\/\//, '')}
                         </span>
                       )}

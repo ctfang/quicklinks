@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Settings as SettingsIcon, LogIn, LogOut, BookOpen, CloudRain, CloudSun, Cloud, Sun, CloudSnow, CloudLightning, ChevronDown, Home, Github } from 'lucide-react';
@@ -6,7 +6,8 @@ import { cn } from '../lib/utils';
 import { AuthModal } from './AuthModal';
 import { Settings } from '../pages/Settings';
 import { WeatherBackground } from './WeatherBackground';
-import { getWeather, WeatherInfo } from '../services/api';
+import { WeatherLocationModal } from './WeatherLocationModal';
+import { WeatherInfo } from '../services/api';
 
 // 根据天气类型返回对应的图标组件
 const WeatherIcon = ({ weather }: { weather: string }) => {
@@ -20,15 +21,16 @@ const WeatherIcon = ({ weather }: { weather: string }) => {
 };
 
 export const Layout = () => {
-  const { user, logoutUser, currentTeam, teams, setCurrentTeam, setIsSettingsOpen } = useAppContext();
+  const { user, logoutUser, currentTeam, teams, setCurrentTeam, setIsSettingsOpen, currentWeather, weatherLocation } =
+    useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [weatherWidget, setWeatherWidget] = useState<WeatherInfo | null>(null);
+  const [showWeatherLocationModal, setShowWeatherLocationModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowTeamDropdown(false);
@@ -38,22 +40,12 @@ export const Layout = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 获取天气用于头部小部件（后端已缓存）
-  useEffect(() => {
-    const fetchWidgetWeather = async () => {
-      try {
-        const data = await getWeather();
-        setWeatherWidget(data);
-      } catch (err) {
-        console.error('Failed to fetch widget weather', err);
-        setWeatherWidget({ weather1: '晴', temperature: 22, place: '深圳' });
-      }
-    };
-    fetchWidgetWeather();
-  }, []);
+  // 使用全局共享的天气数据
+  const weatherWidget: WeatherInfo | null = currentWeather;
 
   return (
     <div className="min-h-screen w-full text-white font-sans flex flex-col relative overflow-hidden bg-slate-900">
+      <WeatherLocationModal open={showWeatherLocationModal} onClose={() => setShowWeatherLocationModal(false)} />
       <WeatherBackground />
       
       <header className="relative w-full h-20 flex items-center justify-between px-6 lg:px-12 z-50 pt-4">
@@ -118,14 +110,19 @@ export const Layout = () => {
 
         <div className="flex items-center gap-4">
           {/* Weather Widget - now powered by backend service with caching */}
-          <div className="hidden sm:flex items-center gap-2 text-sm font-medium drop-shadow-md mr-4 hover:bg-white/10 px-3 py-2 rounded-full transition-colors cursor-pointer">
+          <button
+            type="button"
+            onClick={() => setShowWeatherLocationModal(true)}
+            className="hidden sm:flex items-center gap-2 text-sm font-medium drop-shadow-md mr-4 hover:bg-white/10 px-3 py-2 rounded-full transition-colors cursor-pointer border-0 bg-transparent text-white"
+            title="点击修改天气城市"
+          >
             <WeatherIcon weather={weatherWidget?.weather1 || '晴'} />
             <span>
               {weatherWidget
                 ? `${Math.round(weatherWidget.temperature)}°C ${weatherWidget.place}`
-                : '22°C 深圳'}
+                : `22°C ${weatherLocation.city}`}
             </span>
-          </div>
+          </button>
 
           {user ? (
             <>

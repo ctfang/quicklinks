@@ -1,4 +1,23 @@
 // API Functions
+import {
+  cacheLinks,
+  cacheGroups,
+  cacheProjects,
+  cacheTeams,
+  cacheGuestNav,
+  getCachedLinks,
+  getCachedGroups,
+  getCachedProjects,
+  getCachedTeams,
+  getCachedGuestNav,
+  updateLinkInCache,
+  removeLinkFromCache,
+  updateGroupInCache,
+  removeGroupFromCache,
+  updateProjectInCache,
+  removeProjectFromCache,
+  updateLinksOrderInCache,
+} from '../lib/dataCache';
 
 export interface User {
   id: number;
@@ -42,6 +61,7 @@ export interface NavLink {
   groupId?: string;
   displaySize?: 'icon' | 'small' | 'medium' | 'large' | 'list';
   order?: number;
+  bgColor?: string | null;
 }
 
 export interface NavGroup {
@@ -163,34 +183,118 @@ export const changePassword = async (oldPassword: string, newPassword: string): 
 };
 
 // Links
-/** 未登录访客：首用户个人链接 + 分组 */
-export const getGuestNavigation = async (): Promise<{
+/** 未登录访客：首用户个人链接 + 分组（带缓存） */
+export const getGuestNavigation = async (options?: { useCache?: boolean }): Promise<{
   userId: number | null;
   links: NavLink[];
   groups: NavGroup[];
 }> => {
+  // 优先从缓存读取
+  if (options?.useCache !== false) {
+    const cached = getCachedGuestNav();
+    if (cached) {
+      return cached;
+    }
+  }
+  
   const data = await fetchApi<{
     userId: number | null;
     links: NavLink[];
     groups: NavGroup[];
   }>('/navigation/guest');
-  return {
+  const result = {
     userId: data.userId ?? null,
     links: asArray(data.links),
     groups: asArray(data.groups),
   };
+  
+  // 写入缓存
+  cacheGuestNav(result);
+  return result;
 };
 
 export const getPopularLinks = async (): Promise<NavLink[]> => {
   return asArray(await fetchApi<NavLink[]>('/links/popular'));
 };
 
+/** 获取个人链接（带缓存） */
+export const getPersonalLinksWithCache = async (userId: number, options?: { useCache?: boolean }): Promise<NavLink[]> => {
+  // 优先从缓存读取
+  if (options?.useCache !== false) {
+    const cached = getCachedLinks({ userId });
+    if (cached) {
+      return cached;
+    }
+  }
+  
+  const links = asArray(await fetchApi<NavLink[]>(`/links/personal/${userId}`));
+  cacheLinks({ userId }, links);
+  return links;
+};
+
 export const getPersonalLinks = async (userId: number): Promise<NavLink[]> => {
   return asArray(await fetchApi<NavLink[]>(`/links/personal/${userId}`));
 };
 
+/** 获取团队链接（带缓存） */
+export const getTeamLinksWithCache = async (teamId: string, options?: { useCache?: boolean }): Promise<NavLink[]> => {
+  // 优先从缓存读取
+  if (options?.useCache !== false) {
+    const cached = getCachedLinks({ teamId });
+    if (cached) {
+      return cached;
+    }
+  }
+  
+  const links = asArray(await fetchApi<NavLink[]>(`/links/team/${teamId}`));
+  cacheLinks({ teamId }, links);
+  return links;
+};
+
 export const getTeamLinks = async (teamId: string): Promise<NavLink[]> => {
   return asArray(await fetchApi<NavLink[]>(`/links/team/${teamId}`));
+};
+
+/** 添加链接（更新缓存） */
+export const addLinkWithCache = async (link: Omit<NavLink, 'id' | 'clicks'>, context: { userId?: number; teamId?: string }): Promise<NavLink> => {
+  const newLink = await fetchApi<NavLink>('/links', {
+    method: 'POST',
+    body: JSON.stringify(link),
+  });
+  // 更新缓存
+  updateLinkInCache(context, newLink);
+  return newLink;
+};
+
+/** 更新链接（更新缓存） */
+export const updateLinkWithCache = async (id: string, updates: Partial<NavLink>, context: { userId?: number; teamId?: string }): Promise<NavLink> => {
+  const updatedLink = await fetchApi<NavLink>(`/links/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+  // 更新缓存
+  updateLinkInCache(context, updatedLink);
+  return updatedLink;
+};
+
+/** 删除链接（更新缓存） */
+export const deleteLinkWithCache = async (id: string, context: { userId?: number; teamId?: string }): Promise<void> => {
+  await fetchApi(`/links/${id}`, { method: 'DELETE' });
+  // 更新缓存
+  removeLinkFromCache(context, id);
+};
+
+/** 批量更新链接顺序（更新缓存） */
+export const updateLinksOrderWithCache = async (links: { id: string; order: number }[], context: { userId?: number; teamId?: string }): Promise<void> => {
+  // 使用 Promise.all 并行更新所有链接的顺序
+  await Promise.all(
+    links.map(link => fetchApi(`/links/${link.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ order: link.order }),
+    }))
+  );
+  // 更新缓存
+  updateLinksOrderInCache(context, links);
 };
 
 export const addLink = async (link: Omit<NavLink, 'id' | 'clicks'>): Promise<NavLink> => {
@@ -237,12 +341,51 @@ export const searchLinks = async (query: string, context?: { userId?: number, te
 };
 
 // Groups
+/** 获取分组（带缓存） */
+export const getGroupsWithCache = async (context: { userId?: number; teamId?: string; projectId?: string }, options?: { useCache?: boolean }): Promise<NavGroup[]> => {
+  const params = new URLSearchParams();
+  if (context.projectId) params.append('projectId', context.projectId);
+  if (context.teamId) params.append('teamId', context.teamId);
+  if (context.userId != null) params.append('userId', String(context.userId));
+  
+  // 优先从缓存读取（仅当没有 projectId 过滤时，因为缓存是按 user/team 维度）
+  if (options?.useCache !== false && !context.projectId) {
+    const cached = getCachedGroups({ userId: context.userId, teamId: context.teamId });
+    if (cached) {
+      // 如果有过滤条件，在缓存中过滤
+      if (context.projectId) {
+        return cached.filter(g => g.projectId === context.projectId);
+      }
+      return cached;
+    }
+  }
+  
+  const groups = asArray(await fetchApi<NavGroup[]>(`/groups?${params.toString()}`));
+  
+  // 写入缓存（仅当没有 projectId 过滤时）
+  if (!context.projectId) {
+    cacheGroups({ userId: context.userId, teamId: context.teamId }, groups);
+  }
+  
+  return groups;
+};
+
 export const getGroups = async (context: { userId?: number, teamId?: string, projectId?: string }): Promise<NavGroup[]> => {
   const params = new URLSearchParams();
   if (context.projectId) params.append('projectId', context.projectId);
   if (context.teamId) params.append('teamId', context.teamId);
   if (context.userId != null) params.append('userId', String(context.userId));
   return asArray(await fetchApi<NavGroup[]>(`/groups?${params.toString()}`));
+};
+
+/** 添加分组（更新缓存） */
+export const addGroupWithCache = async (group: Omit<NavGroup, 'id'>, context: { userId?: number; teamId?: string }): Promise<NavGroup> => {
+  const newGroup = await fetchApi<NavGroup>('/groups', {
+    method: 'POST',
+    body: JSON.stringify(group),
+  });
+  updateGroupInCache(context, newGroup);
+  return newGroup;
 };
 
 export const addGroup = async (group: Omit<NavGroup, 'id'>): Promise<NavGroup> => {
@@ -252,11 +395,27 @@ export const addGroup = async (group: Omit<NavGroup, 'id'>): Promise<NavGroup> =
   });
 };
 
+/** 更新分组（更新缓存） */
+export const updateGroupWithCache = async (id: string, updates: Partial<NavGroup>, context: { userId?: number; teamId?: string }): Promise<NavGroup> => {
+  const updatedGroup = await fetchApi<NavGroup>(`/groups/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+  updateGroupInCache(context, updatedGroup);
+  return updatedGroup;
+};
+
 export const updateGroup = async (id: string, updates: Partial<NavGroup>): Promise<NavGroup> => {
   return fetchApi(`/groups/${id}`, {
     method: 'PUT',
     body: JSON.stringify(updates),
   });
+};
+
+/** 删除分组（更新缓存） */
+export const deleteGroupWithCache = async (id: string, context: { userId?: number; teamId?: string }): Promise<void> => {
+  await fetchApi(`/groups/${id}`, { method: 'DELETE' });
+  removeGroupFromCache(context, id);
 };
 
 export const deleteGroup = async (id: string): Promise<void> => {
@@ -268,6 +427,21 @@ export const getPersonalGroups = async (userId: number): Promise<NavGroup[]> => 
 };
 
 // Teams & Projects
+/** 获取用户团队（带缓存） */
+export const getUserTeamsWithCache = async (userId: number, options?: { useCache?: boolean }): Promise<Team[]> => {
+  // 优先从缓存读取
+  if (options?.useCache !== false) {
+    const cached = getCachedTeams(userId);
+    if (cached) {
+      return cached;
+    }
+  }
+  
+  const teams = asArray(await fetchApi<Team[]>(`/teams/user/${userId}`));
+  cacheTeams(userId, teams);
+  return teams;
+};
+
 export const getUserTeams = async (userId: number): Promise<Team[]> => {
   return asArray(await fetchApi<Team[]>(`/teams/user/${userId}`));
 };
@@ -305,8 +479,33 @@ export const removeTeamMember = async (memberId: string): Promise<void> => {
   return fetchApi(`/team-members/${memberId}`, { method: 'DELETE' });
 };
 
+/** 获取团队项目（带缓存） */
+export const getTeamProjectsWithCache = async (teamId: string, options?: { useCache?: boolean }): Promise<Project[]> => {
+  // 优先从缓存读取
+  if (options?.useCache !== false) {
+    const cached = getCachedProjects(teamId);
+    if (cached) {
+      return cached;
+    }
+  }
+  
+  const projects = asArray(await fetchApi<Project[]>(`/projects/team/${teamId}`));
+  cacheProjects(teamId, projects);
+  return projects;
+};
+
 export const getTeamProjects = async (teamId: string): Promise<Project[]> => {
   return asArray(await fetchApi<Project[]>(`/projects/team/${teamId}`));
+};
+
+/** 添加项目（更新缓存） */
+export const addProjectWithCache = async (teamId: string, name: string, description: string): Promise<Project> => {
+  const newProject = await fetchApi<Project>('/projects', {
+    method: 'POST',
+    body: JSON.stringify({ teamId, name, description }),
+  });
+  updateProjectInCache(teamId, newProject);
+  return newProject;
 };
 
 export const addProject = async (teamId: string, name: string, description: string): Promise<Project> => {
@@ -316,11 +515,27 @@ export const addProject = async (teamId: string, name: string, description: stri
   });
 };
 
+/** 更新项目（更新缓存） */
+export const updateProjectWithCache = async (id: string, updates: Partial<Project>, teamId: string): Promise<Project> => {
+  const updatedProject = await fetchApi<Project>(`/projects/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+  updateProjectInCache(teamId, updatedProject);
+  return updatedProject;
+};
+
 export const updateProject = async (id: string, updates: Partial<Project>): Promise<Project> => {
   return fetchApi(`/projects/${id}`, {
     method: 'PUT',
     body: JSON.stringify(updates),
   });
+};
+
+/** 删除项目（更新缓存） */
+export const deleteProjectWithCache = async (id: string, teamId: string): Promise<void> => {
+  await fetchApi(`/projects/${id}`, { method: 'DELETE' });
+  removeProjectFromCache(teamId, id);
 };
 
 export const deleteProject = async (id: string): Promise<void> => {
