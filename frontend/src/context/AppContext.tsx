@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User, Team, Project, logout, getUserTeamsWithCache, getGuestNavigation, getMe, getWeather, WeatherInfo } from '../services/api';
+import { User, Team, Project, logout, getUserTeamsWithCache, getGuestNavigation, getMe, getWeather, WeatherInfo, getWeatherLocation } from '../services/api';
 import {
   DEFAULT_WEATHER_LOCATION,
   readWeatherLocationFromStorage,
@@ -81,7 +81,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // 刷新天气数据
   const refreshWeather = useCallback(async () => {
     try {
-      const data = await getWeather(weatherLocation.city, weatherLocation.province);
+      const data = await getWeather(weatherLocation.city, weatherLocation.province, weatherLocation.adcode);
       if (data.error || (data.code !== undefined && data.code !== 200)) {
         setWeatherError(data.error || '天气数据获取失败');
         setCurrentWeather(null);
@@ -94,7 +94,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setWeatherError('无法连接天气服务');
       setCurrentWeather(null);
     }
-  }, [weatherLocation.city, weatherLocation.province]);
+  }, [weatherLocation.city, weatherLocation.province, weatherLocation.adcode]);
 
   // 天气位置变化时自动刷新天气
   useEffect(() => {
@@ -105,7 +105,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const province =
       loc.province.trim() !== '' ? loc.province.trim() : DEFAULT_WEATHER_LOCATION.province;
     const city = loc.city.trim() !== '' ? loc.city.trim() : DEFAULT_WEATHER_LOCATION.city;
-    const next = { province, city };
+    const adcode = typeof loc.adcode === 'string' ? loc.adcode.trim() : DEFAULT_WEATHER_LOCATION.adcode;
+    const next = { province, city, adcode };
     setWeatherLocationState(next);
     writeWeatherLocationToStorage(next);
   }, []);

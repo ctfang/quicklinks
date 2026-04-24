@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { getUserWidgets, updateWidgetConfig, WidgetConfig, getTeamMembers, createTeam, updateTeam, deleteTeam, addTeamMember, removeTeamMember, TeamMember, changePassword } from '../services/api';
-import { clearAllNavCache } from '../lib/dataCache';
+import { getUserWidgets, updateWidgetConfig, WidgetConfig, getTeamMembers, createTeam, updateTeam, deleteTeam, addTeamMember, removeTeamMember, TeamMember, changePassword, getWeatherLocation } from '../services/api';
+import { clearAllNavCache, cacheTeams } from '../lib/dataCache';
 import { Save, User as UserIcon, LayoutDashboard, Users, Plus, X, UserPlus, Trash2, Edit2, Lock, Eye, EyeOff, Search, Cloud, Shield, RefreshCw, AlertCircle } from 'lucide-react';
 import { md5Hex } from '../lib/passwordHash';
 import { cn } from '../lib/utils';
@@ -53,6 +53,7 @@ export const Settings = () => {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [weatherProvinceDraft, setWeatherProvinceDraft] = useState(weatherLocation.province);
   const [weatherCityDraft, setWeatherCityDraft] = useState(weatherLocation.city);
+  const [weatherAdcodeDraft, setWeatherAdcodeDraft] = useState(weatherLocation.adcode);
 
   // Cache Refresh State
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
@@ -81,8 +82,9 @@ export const Settings = () => {
     if (isSettingsOpen) {
       setWeatherProvinceDraft(weatherLocation.province);
       setWeatherCityDraft(weatherLocation.city);
+      setWeatherAdcodeDraft(weatherLocation.adcode);
     }
-  }, [isSettingsOpen, weatherLocation.province, weatherLocation.city]);
+  }, [isSettingsOpen, weatherLocation.province, weatherLocation.city, weatherLocation.adcode]);
 
   useEffect(() => {
     if (selectedTeamId && isSettingsOpen) {
@@ -106,7 +108,9 @@ export const Settings = () => {
     e.preventDefault();
     if (user && newTeamName) {
       const newTeam = await createTeam(newTeamName, newTeamDesc, user.id);
-      setTeams(prev => [...prev, newTeam]);
+      const updated = [...teams, newTeam];
+      setTeams(updated);
+      cacheTeams(user.id, updated);
       setIsCreatingTeam(false);
       setNewTeamName('');
       setNewTeamDesc('');
@@ -117,7 +121,9 @@ export const Settings = () => {
     e.preventDefault();
     if (user && editingTeamId && editTeamName) {
       const updatedTeam = await updateTeam(editingTeamId, { name: editTeamName, description: editTeamDesc });
-      setTeams(prev => prev.map(t => t.id === editingTeamId ? updatedTeam : t));
+      const updated = teams.map(t => t.id === editingTeamId ? updatedTeam : t);
+      setTeams(updated);
+      cacheTeams(user.id, updated);
       // 如果当前选中的团队被编辑了，也更新 currentTeam
       if (currentTeam && currentTeam.id === editingTeamId) {
         setCurrentTeam(updatedTeam);
@@ -133,11 +139,14 @@ export const Settings = () => {
       message: '确定要删除这个团队吗？此操作不可恢复，且会删除团队下的所有项目和链接。',
       onConfirm: async () => {
         await deleteTeam(teamId);
-        setTeams(prev => prev.filter(t => t.id !== teamId));
+        const updated = teams.filter(t => t.id !== teamId);
+        setTeams(updated);
+        if (user) {
+          cacheTeams(user.id, updated);
+        }
         // 如果删除的是当前选中的团队，切换到其他团队或设为 null
         if (currentTeam && currentTeam.id === teamId) {
-          const remainingTeams = teams.filter(t => t.id !== teamId);
-          setCurrentTeam(remainingTeams.length > 0 ? remainingTeams[0] : null);
+          setCurrentTeam(updated.length > 0 ? updated[0] : null);
         }
       }
     });
@@ -430,7 +439,7 @@ export const Settings = () => {
                 <h2 className="text-xl font-medium">天气城市</h2>
               </div>
               <p className="text-sm text-white/60">
-                默认广东 / 深圳；可改为其他城市，将保存在本浏览器并用于顶部天气与背景。
+                默认广东 / 深圳；可改为其他城市，将保存在本浏览器并用于顶部天气与背景。填写 adcode 后可使用高德天气获取更精准的数据。
               </p>
               <form
                 className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-4 max-w-md"
@@ -439,6 +448,7 @@ export const Settings = () => {
                   setWeatherLocation({
                     province: weatherProvinceDraft,
                     city: weatherCityDraft,
+                    adcode: weatherAdcodeDraft,
                   });
                 }}
               >
@@ -468,12 +478,49 @@ export const Settings = () => {
                     placeholder="深圳"
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-full text-sm font-medium transition-colors"
-                >
-                  保存天气城市
-                </button>
+                <div>
+                  <label htmlFor="settings-weather-adcode" className="block text-sm text-white/80 mb-1">
+                    城市编码（adcode）
+                  </label>
+                  <input
+                    id="settings-weather-adcode"
+                    type="text"
+                    value={weatherAdcodeDraft}
+                    onChange={(e) => setWeatherAdcodeDraft(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    placeholder="例如：440300（留空则使用省/市查询）"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-full text-sm font-medium transition-colors"
+                  >
+                    保存天气城市
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const loc = await getWeatherLocation();
+                        if (loc.adcode) {
+                          setWeatherLocation({
+                            province: loc.province || weatherProvinceDraft,
+                            city: loc.city || weatherCityDraft,
+                            adcode: loc.adcode,
+                          });
+                        } else if (loc.error) {
+                          alert('定位失败：' + loc.error);
+                        }
+                      } catch (err: any) {
+                        alert('定位请求失败：' + (err.message || '未知错误'));
+                      }
+                    }}
+                    className="bg-white/10 hover:bg-white/20 text-white px-5 py-2 rounded-full text-sm font-medium transition-colors"
+                  >
+                    自动定位
+                  </button>
+                </div>
               </form>
             </div>
           )}

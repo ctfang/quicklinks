@@ -2,6 +2,7 @@ package providers
 
 import (
 	"log"
+	"strings"
 
 	"github.com/ctfang/navihub/backend/app/navihub"
 	"github.com/ctfang/navihub/backend/pkg/mail"
@@ -24,9 +25,23 @@ func NewNavihubBootstrap() *NavihubBootstrap {
 
 func (n *NavihubBootstrap) Init() {}
 
+func trim(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.TrimPrefix(s, "\ufeff")
+	s = strings.Trim(s, `"'`)
+	return strings.TrimSpace(s)
+}
+
 func (n *NavihubBootstrap) Boot() {
 	nv := homepv.GetBean("config").(homepv.Bean).GetBean("navihub").(*services.Config)
 	mail.BindNavihub(nv)
+
+	// 绑定高德配置（来自 config/app.yaml）
+	if cfgRoot, ok := homepv.GetBean("config").(homepv.Bean); ok {
+		if appCfg, ok := cfgRoot.GetBean("app").(*services.Config); ok {
+			navihub.BindGaode(trim(appCfg.GetString("gaode.key")), trim(appCfg.GetString("gaode.name")))
+		}
+	}
 
 	gdb := database.DB()
 	if gdb == nil {

@@ -589,6 +589,21 @@ export interface WeatherInfo {
   error?: string;
 }
 
-export const getWeather = async (city = '深圳', province = '广东'): Promise<WeatherInfo> => {
-  return fetchApi<WeatherInfo>(`/weather?city=${encodeURIComponent(city)}&province=${encodeURIComponent(province)}`);
+export interface WeatherLocationInfo {
+  province: string;
+  city: string;
+  adcode: string;
+  error?: string;
+}
+
+export const getWeather = async (city = '深圳', province = '广东', adcode = ''): Promise<WeatherInfo> => {
+  let url = `/weather?city=${encodeURIComponent(city)}&province=${encodeURIComponent(province)}`;
+  if (adcode) {
+    url += `&adcode=${encodeURIComponent(adcode)}`;
+  }
+  return fetchApi<WeatherInfo>(url);
+};
+
+export const getWeatherLocation = async (): Promise<WeatherLocationInfo> => {
+  return fetchApi<WeatherLocationInfo>('/weather/location');
 };

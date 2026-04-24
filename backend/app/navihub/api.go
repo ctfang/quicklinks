@@ -52,6 +52,17 @@ var (
 	cacheMutex   sync.RWMutex
 )
 
+var (
+	gaodeKey  string
+	gaodeName string
+)
+
+// BindGaode 绑定高德配置（在 Bootstrap 阶段调用）。
+func BindGaode(key, name string) {
+	gaodeKey = strings.TrimSpace(key)
+	gaodeName = strings.TrimSpace(name)
+}
+
 func login(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body loginBody
@@ -2002,17 +2013,40 @@ func widgetsPut(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// getWeather 从服务端获取天气数据，支持按时间+城市缓存，减少对第三方API的多次调用
-// 如果第三方API失败，提供默认晴天数据，避免前端出现灰蒙蒙的蒙版问题
+// cacheWeatherData 将天气数据写入缓存并限制容量。
+func cacheWeatherData(key string, data interface{}) {
+	cacheMutex.Lock()
+	weatherCache[key] = cachedWeather{
+		data:      data,
+		timestamp: time.Now(),
+	}
+	if len(weatherCache) > 100 {
+		for k := range weatherCache {
+			if len(weatherCache) <= 50 {
+				break
+			}
+			delete(weatherCache, k)
+		}
+	}
+	cacheMutex.Unlock()
+}
+
+// getWeather 获取天气数据；优先使用 adcode 调用高德天气，无 adcode 时回退旧接口。
+// 若没有任何参数，自动根据请求 IP 定位并返回天气。
 func getWeather(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		adcode := c.Query("adcode")
 		province := c.DefaultQuery("province", "广东")
 		city := c.DefaultQuery("city", "深圳")
 
-		// 按照时间(小时)+城市生成缓存key
 		now := time.Now()
 		hourKey := now.Format("2006-01-02-15")
-		cacheKey := fmt.Sprintf("%s_%s_%s", province, city, hourKey)
+		var cacheKey string
+		if adcode != "" {
+			cacheKey = fmt.Sprintf("gaode_%s_%s", adcode, hourKey)
+		} else {
+			cacheKey = fmt.Sprintf("%s_%s_%s", province, city, hourKey)
+		}
 
 		// 检查缓存 (缓存30分钟)
 		cacheMutex.RLock()
@@ -2023,7 +2057,38 @@ func getWeather(db *sql.DB) gin.HandlerFunc {
 		}
 		cacheMutex.RUnlock()
 
-		// 使用带超时的请求调用第三方天气API
+		// 1. 优先使用 adcode 查询高德天气
+		if adcode != "" && gaodeKey != "" {
+			data, err := gaodeWeather(adcode)
+			if err == nil {
+				cacheWeatherData(cacheKey, data)
+				c.JSON(http.StatusOK, data)
+				return
+			}
+		}
+
+		// 2. 没有任何参数时，自动根据 IP 定位并查询天气
+		if adcode == "" && c.Query("province") == "" && c.Query("city") == "" {
+			clientIP := c.ClientIP()
+			if gaodeKey != "" {
+				p, ci, ad, err := gaodeIPLocation(clientIP)
+				if err == nil && ad != "" {
+					data, err := gaodeWeather(ad)
+					if err == nil {
+						cacheWeatherData(cacheKey, data)
+						c.JSON(http.StatusOK, data)
+						return
+					}
+				}
+				// IP 定位失败但获得了省/市，尝试用旧接口
+				if p != "" && ci != "" {
+					province = p
+					city = ci
+				}
+			}
+		}
+
+		// 3. 回退到原有第三方天气API（兼容旧前端 province/city 传参）
 		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 		defer cancel()
 
@@ -2058,41 +2123,32 @@ func getWeather(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 检查第三方API返回的code字段
 		if code, ok := apiData["code"].(float64); ok && int(code) != 200 {
 			c.JSON(http.StatusOK, defaultWeather(city))
 			return
 		}
 
 		if code, ok := apiData["code"].(float64); ok && int(code) == 200 {
-			// 解析第三方API响应，映射到前端期望的格式
 			weatherData := WeatherData{
 				Code: 200,
 			}
-
-			// 解析天气描述
 			if w, ok := apiData["weather1"].(string); ok {
 				weatherData.Weather1 = w
 			} else {
 				weatherData.Weather1 = "晴"
 			}
-
-			// 解析温度（从 nowinfo.temperature）
 			if nowinfo, ok := apiData["nowinfo"].(map[string]interface{}); ok {
 				if temp, ok := nowinfo["temperature"].(float64); ok {
 					weatherData.Temperature = int(temp)
 				}
 			}
 			if weatherData.Temperature == 0 {
-				// 尝试从 wd1（最高温）解析
 				if wd1, ok := apiData["wd1"].(string); ok {
 					if t, err := strconv.Atoi(wd1); err == nil {
 						weatherData.Temperature = t
 					}
 				}
 			}
-
-			// 解析地点
 			if name, ok := apiData["name"].(string); ok && name != "" {
 				weatherData.Place = name
 			} else if shi, ok := apiData["shi"].(string); ok && shi != "" {
@@ -2100,30 +2156,154 @@ func getWeather(db *sql.DB) gin.HandlerFunc {
 			} else {
 				weatherData.Place = city
 			}
-
-			// 缓存转换后的数据
-			cacheMutex.Lock()
-			weatherCache[cacheKey] = cachedWeather{
-				data:      weatherData,
-				timestamp: now,
-			}
-			// 限制缓存大小，防止内存泄漏
-			if len(weatherCache) > 100 {
-				for k := range weatherCache {
-					if len(weatherCache) <= 50 {
-						break
-					}
-					delete(weatherCache, k)
-				}
-			}
-			cacheMutex.Unlock()
-
+			cacheWeatherData(cacheKey, weatherData)
 			c.JSON(http.StatusOK, weatherData)
 			return
 		}
 
 		c.JSON(http.StatusOK, defaultWeather(city))
 	}
+}
+
+// getWeatherLocation 根据请求 IP 调用高德 IP 定位，返回省、市、adcode。
+func getWeatherLocation(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if gaodeKey == "" {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "高德密钥未配置"})
+			return
+		}
+		clientIP := c.ClientIP()
+		province, city, adcode, err := gaodeIPLocation(clientIP)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"province": province,
+				"city":     city,
+				"adcode":   adcode,
+				"error":    err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"province": province,
+			"city":     city,
+			"adcode":   adcode,
+		})
+	}
+}
+
+// gaodeIPLocation 调用高德 IP 定位接口，根据 IP 获取省、市、adcode。
+func gaodeIPLocation(clientIP string) (province, city, adcode string, err error) {
+	if gaodeKey == "" {
+		return "", "", "", fmt.Errorf("gaode key not configured")
+	}
+	var apiURL string
+	if clientIP != "" && clientIP != "127.0.0.1" && clientIP != "::1" {
+		apiURL = fmt.Sprintf("https://restapi.amap.com/v3/ip?key=%s&ip=%s", gaodeKey, url.QueryEscape(clientIP))
+	} else {
+		apiURL = fmt.Sprintf("https://restapi.amap.com/v3/ip?key=%s", gaodeKey)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return "", "", "", err
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Status   string      `json:"status"`
+		Info     string      `json:"info"`
+		Infocode string      `json:"infocode"`
+		Province interface{} `json:"province"`
+		City     interface{} `json:"city"`
+		Adcode   interface{} `json:"adcode"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", "", "", err
+	}
+	if result.Status != "1" {
+		return "", "", "", fmt.Errorf("gaode ip location failed: %s", result.Info)
+	}
+	return ifaceString(result.Province), ifaceString(result.City), ifaceString(result.Adcode), nil
+}
+
+// ifaceString 将 interface{} 转为字符串；如果是数组则返回空串（兼容高德空值返回 []）。
+func ifaceString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+// gaodeWeather 调用高德天气接口，根据 adcode 获取实时天气。
+func gaodeWeather(adcode string) (*WeatherData, error) {
+	if gaodeKey == "" {
+		return nil, fmt.Errorf("gaode key not configured")
+	}
+	apiURL := fmt.Sprintf("https://restapi.amap.com/v3/weather/weatherInfo?key=%s&city=%s&extensions=base", gaodeKey, url.QueryEscape(adcode))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Status   string `json:"status"`
+		Info     string `json:"info"`
+		Infocode string `json:"infocode"`
+		Lives    []struct {
+			Province      string `json:"province"`
+			City          string `json:"city"`
+			Adcode        string `json:"adcode"`
+			Weather       string `json:"weather"`
+			Temperature   string `json:"temperature"`
+			Winddirection string `json:"winddirection"`
+			Windpower     string `json:"windpower"`
+			Humidity      string `json:"humidity"`
+			Reporttime    string `json:"reporttime"`
+		} `json:"lives"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+	if result.Status != "1" || len(result.Lives) == 0 {
+		return nil, fmt.Errorf("gaode weather failed: %s", result.Info)
+	}
+
+	live := result.Lives[0]
+	temp, _ := strconv.Atoi(live.Temperature)
+	humidity, _ := strconv.Atoi(live.Humidity)
+
+	wind := live.Winddirection
+	if live.Windpower != "" {
+		wind += "风" + live.Windpower + "级"
+	}
+
+	return &WeatherData{
+		Code:        200,
+		Weather1:    live.Weather,
+		Temperature: temp,
+		Place:       live.City,
+		Humidity:    humidity,
+		Wind:        wind,
+	}, nil
 }
 
 func defaultWeather(city string) WeatherData {

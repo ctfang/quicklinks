@@ -82,6 +82,7 @@ func (Routes) GetRoutes() map[*api.Config]func(c *gin.Context) {
 	reg(api.Get("/widgets/user/:userId"), widgetsGet)
 	reg(api.Put("/widgets/user/:userId"), widgetsPut)
 	reg(api.Get("/weather"), getWeather)
+	reg(api.Get("/weather/location"), getWeatherLocation)
 
 	return m
 }

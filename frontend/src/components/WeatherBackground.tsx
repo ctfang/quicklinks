@@ -90,28 +90,34 @@ const RealisticMoon: React.FC<{ className?: string }> = ({ className = '' }) => 
   return (
     <div className={`relative w-32 h-32 ${className}`}>
       {/* 月光光晕 */}
-      <div className="absolute -inset-4 rounded-full bg-yellow-100/20 blur-xl animate-pulse-slow" />
-      <div className="absolute -inset-2 rounded-full bg-yellow-50/30 blur-lg animate-pulse-slow" />
-      {/* 月亮本体 */}
-      <div 
-        className="absolute inset-4 rounded-full shadow-lg"
+      <div className="absolute -inset-4 rounded-full bg-yellow-100/15 blur-xl animate-pulse-slow" />
+      <div className="absolute -inset-2 rounded-full bg-yellow-50/20 blur-lg animate-pulse-slow" />
+
+      {/* 月亮本体 - 使用两个重叠圆形形成自然月牙 */}
+      <div
+        className="absolute inset-2 rounded-full"
         style={{
-          background: 'linear-gradient(135deg, #fefce8 0%, #f1f5f9 50%, #cbd5e1 100%)',
-          boxShadow: '0 0 30px 5px rgba(254, 252, 232, 0.3), inset -10px -10px 20px rgba(0,0,0,0.05)'
+          background: 'linear-gradient(135deg, #fefce8 0%, #e2e8f0 50%, #94a3b8 100%)',
+          boxShadow: '0 0 40px 8px rgba(254, 252, 232, 0.2), inset -8px -8px 16px rgba(0,0,0,0.08)'
         }}
       >
-        {/* 月球环形山 - 更小更淡 */}
-        <div className="absolute w-2 h-2 rounded-full bg-slate-300/40 top-5 left-6" />
-        <div className="absolute w-1.5 h-1.5 rounded-full bg-slate-300/30 top-8 right-5" />
-        <div className="absolute w-1 h-1 rounded-full bg-slate-300/35 bottom-6 left-7" />
+        {/* 月球环形山 */}
+        <div className="absolute w-2 h-2 rounded-full bg-slate-400/30 top-4 left-5" />
+        <div className="absolute w-1.5 h-1.5 rounded-full bg-slate-400/25 top-8 right-6" />
+        <div className="absolute w-1 h-1 rounded-full bg-slate-400/28 bottom-5 left-8" />
+        <div className="absolute w-1.5 h-1.5 rounded-full bg-slate-400/20 top-5 right-4" />
       </div>
-      {/* 月牙遮罩 */}
-      <div 
-        className="absolute w-24 h-24 rounded-full"
+
+      {/* 遮罩圆 - 与夜空同色，偏移形成月牙边缘 */}
+      <div
+        className="absolute rounded-full"
         style={{
-          background: 'radial-gradient(circle at 25% 50%, transparent 35%, rgba(15, 23, 42, 0.25) 36%)',
-          top: '16px',
-          left: '16px'
+          width: '112px',
+          height: '112px',
+          background: '#0f172a',
+          top: '-8px',
+          right: '-16px',
+          boxShadow: '0 0 24px 4px rgba(15, 23, 42, 0.6)'
         }}
       />
     </div>
