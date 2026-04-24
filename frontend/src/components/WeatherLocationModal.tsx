@@ -11,19 +11,21 @@ export const WeatherLocationModal = ({ open, onClose }: Props) => {
   const { weatherLocation, setWeatherLocation } = useAppContext();
   const [province, setProvince] = useState(weatherLocation.province);
   const [city, setCity] = useState(weatherLocation.city);
+  const [adcode, setAdcode] = useState(weatherLocation.adcode);
 
   useEffect(() => {
     if (open) {
       setProvince(weatherLocation.province);
       setCity(weatherLocation.city);
+      setAdcode(weatherLocation.adcode);
     }
-  }, [open, weatherLocation.province, weatherLocation.city]);
+  }, [open, weatherLocation.province, weatherLocation.city, weatherLocation.adcode]);
 
   if (!open) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setWeatherLocation({ province, city });
+    setWeatherLocation({ province, city, adcode });
     onClose();
   };
 
@@ -78,6 +80,19 @@ export const WeatherLocationModal = ({ open, onClose }: Props) => {
               className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               placeholder="例如：深圳"
               autoComplete="address-level2"
+            />
+          </div>
+          <div>
+            <label htmlFor="wl-adcode" className="block text-sm text-white/80 mb-1">
+              城市编码（adcode）
+            </label>
+            <input
+              id="wl-adcode"
+              type="text"
+              value={adcode}
+              onChange={(e) => setAdcode(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              placeholder="例如：440300（留空则使用省/市查询）"
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">

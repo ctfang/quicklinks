@@ -8,7 +8,7 @@ public_url: env("APP_PUBLIC_URL", "http://127.0.0.1:3000")
 # 生产环境 HTTPS 下设 JWT_COOKIE_SECURE=true 以启用 Secure Cookie。
 # CORS_ALLOW_ORIGINS：逗号分隔的浏览器 Origin；为空则沿用 Access-Control-Allow-Origin: *（仅适合同域或无需 Cookie 的跨域）。
 jwt_secret: env("JWT_SECRET", "")
-jwt_access_ttl_seconds: env("JWT_ACCESS_TTL_SECONDS", "86400")
+jwt_access_ttl_seconds: env("JWT_ACCESS_TTL_SECONDS", "31536000")
 jwt_cookie_secure: env("JWT_COOKIE_SECURE", "false")
 cors_allow_origins: env("CORS_ALLOW_ORIGINS", "")
 

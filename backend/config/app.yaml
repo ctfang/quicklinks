@@ -10,3 +10,7 @@ log:
   path: env("LOG_PATH", "")
   level: env("LOG_LEVEL", "info")
   formatter: env("LOG_FORMATTER", "text")
+
+gaode:
+  name: env("GAODE_NAME", "web_tianqi")
+  key: env("GAODE_KEY", "e89b19ce8c8780ab0dfddad9f7811848")
