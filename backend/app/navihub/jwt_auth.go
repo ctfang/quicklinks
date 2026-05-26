@@ -26,7 +26,7 @@ func jwtSecret() string {
 func jwtAccessTTL() time.Duration {
 	sec := 86400
 	if s := strings.TrimSpace(os.Getenv("JWT_ACCESS_TTL_SECONDS")); s != "" {
-		if v, err := strconv.Atoi(s); err == nil && v > 0 && v < 365*86400 {
+		if v, err := strconv.Atoi(s); err == nil && v > 0 {
 			sec = v
 		}
 	}
