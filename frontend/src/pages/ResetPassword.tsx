@@ -1,3 +1,4 @@
+import { Input, Button } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { confirmPasswordReset, requestPasswordReset } from '../services/api';
@@ -104,34 +105,32 @@ export const ResetPassword = () => {
               </div>
             )}
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-              <input
+              <Input prefix={<Mail size={18} />}
                 type="email"
                 autoComplete="email"
                 placeholder="注册邮箱"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={sending || loading}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                className="w-full"
               />
             </div>
 
             {!codeSent ? (
-              <button
-                type="submit"
+              <Button type="primary"
+                htmlType="submit"
                 disabled={sending}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl disabled:opacity-50"
+                className="w-full"
               >
                 {sending ? '发送中...' : '发送验证码'}
-              </button>
+              </Button>
             ) : (
               <>
                 <p className="text-white/40 text-xs">
                   验证码已发送，请查收邮件（约 15 分钟内有效）。如需重发请修改邮箱后再次点击发送。
                 </p>
                 <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-                  <input
+                  <Input prefix={<KeyRound size={18} />}
                     type="text"
                     inputMode="numeric"
                     pattern="\d*"
@@ -141,36 +140,34 @@ export const ResetPassword = () => {
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     disabled={loading}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 tracking-widest disabled:opacity-50"
+                    className="w-full"
                   />
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-                  <input
+                  <Input prefix={<Lock size={18} />}
                     type="password"
                     autoComplete="new-password"
                     placeholder="新密码（至少 6 位）"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading || code.trim().length !== 6}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+                    className="w-full"
                   />
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-                  <input
+                  <Input prefix={<Lock size={18} />}
                     type="password"
                     autoComplete="new-password"
                     placeholder="确认新密码"
                     value={password2}
                     onChange={(e) => setPassword2(e.target.value)}
                     disabled={loading || code.trim().length !== 6}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 disabled:opacity-40"
+                    className="w-full"
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
+                  <Button type="default"
+                    htmlType="button"
                     onClick={() => {
                       setCodeSent(false);
                       setCode('');
@@ -181,17 +178,17 @@ export const ResetPassword = () => {
                       setSearchParams(em ? { email: em } : {});
                     }}
                     disabled={loading}
-                    className="flex-1 bg-white/10 hover:bg-white/15 text-white font-medium py-3 rounded-xl disabled:opacity-50"
+                    className="flex-1"
                   >
                     重发验证码
-                  </button>
-                  <button
-                    type="submit"
+                  </Button>
+                  <Button type="primary"
+                    htmlType="submit"
                     disabled={loading || code.trim().length !== 6}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl disabled:opacity-50"
+                    className="flex-1"
                   >
                     {loading ? '提交中...' : '确认修改密码'}
-                  </button>
+                  </Button>
                 </div>
               </>
             )}

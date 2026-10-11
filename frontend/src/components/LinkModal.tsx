@@ -1,5 +1,6 @@
+import { Input, Button, Select, Segmented, Modal, Typography } from 'antd';
 import React, { useState, useEffect } from 'react';
-import { X, Link as LinkIcon, Type, Image, LayoutGrid, Folder, Palette } from 'lucide-react';
+import { Link as LinkIcon, Type, Image, Palette } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { NavLink, NavGroup } from '../services/api';
 
@@ -9,9 +10,10 @@ interface LinkModalProps {
   onSave: (link: Partial<NavLink>) => Promise<void>;
   initialData?: NavLink | null;
   groups?: NavGroup[];
+  initialGroupId?: string;
 }
 
-export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }: LinkModalProps) => {
+export const LinkModal = ({ isOpen, onClose, onSave, initialData, initialGroupId, groups = [] }: LinkModalProps) => {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [icon, setIcon] = useState('');
@@ -63,18 +65,18 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }:
 
   // 预设颜色选项
   const colorOptions = [
-    { value: '', label: '默认', class: 'bg-black/20' },
-    { value: '#3b82f6', label: '蓝色', class: 'bg-blue-500' },
-    { value: '#10b981', label: '绿色', class: 'bg-green-500' },
-    { value: '#f59e0b', label: '橙色', class: 'bg-amber-500' },
-    { value: '#ef4444', label: '红色', class: 'bg-red-500' },
-    { value: '#8b5cf6', label: '紫色', class: 'bg-violet-500' },
-    { value: '#ec4899', label: '粉色', class: 'bg-pink-500' },
-    { value: '#06b6d4', label: '青色', class: 'bg-cyan-500' },
-    { value: '#6366f1', label: '靛蓝', class: 'bg-indigo-500' },
-    { value: '#14b8a6', label: ' teal', class: 'bg-teal-500' },
-    { value: '#f97316', label: '橙红', class: 'bg-orange-500' },
-    { value: '#84cc16', label: '青柠', class: 'bg-lime-500' },
+    { value: '', label: '默认' },
+    { value: '#3b82f6', label: '蓝色' },
+    { value: '#10b981', label: '绿色' },
+    { value: '#f59e0b', label: '橙色' },
+    { value: '#ef4444', label: '红色' },
+    { value: '#8b5cf6', label: '紫色' },
+    { value: '#ec4899', label: '粉色' },
+    { value: '#06b6d4', label: '青色' },
+    { value: '#6366f1', label: '靛蓝' },
+    { value: '#14b8a6', label: ' teal' },
+    { value: '#f97316', label: '橙红' },
+    { value: '#84cc16', label: '青柠' },
   ];
 
   useEffect(() => {
@@ -93,16 +95,15 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }:
       setUrl('');
       setIcon('');
       setDisplaySize('icon');
-      setGroupId('');
+      setGroupId(initialGroupId || '');
       setBgColor('');
       setIconMode('preset');
     }
-  }, [initialData, isOpen]);
-
-  if (!isOpen) return null;
+  }, [initialData, initialGroupId, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     const u = url.trim();
     if (!u) return;
     setIsLoading(true);
@@ -128,190 +129,117 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }:
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="relative w-full max-w-md bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
-        >
-          <X size={20} />
-        </button>
-
-        <div className="p-8">
-          <h2 className="text-2xl font-bold text-white mb-2">
-            {initialData ? '编辑导航' : '添加导航'}
-          </h2>
-          <p className="text-white/60 text-sm mb-8">
-            {initialData ? '修改链接信息' : '只需填写地址；标题与图标可由服务器自动抓取'}
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal destroyOnHidden open={isOpen} title={initialData ? '编辑导航' : '添加导航'} centered width={480} footer={null} zIndex={1000}
+      onCancel={() => { if (!isLoading) onClose(); }} mask={{ closable: !isLoading }} keyboard={!isLoading} closable={!isLoading}
+      styles={{ body: { maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' } }}>
+      <Typography.Paragraph type="secondary">{initialData ? '修改链接信息' : '只需填写地址；标题与图标可由服务器自动抓取'}</Typography.Paragraph>
+      <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
-              <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-              <input 
-                type="text" 
-                placeholder="网站地址（必填，可省略 https://）" 
+              <Input prefix={<LinkIcon size={18} />}
+                type="text"
+                placeholder="网站地址（必填，可省略 https://）"
                 required
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 transition-colors"
-              />
+                className="w-full"
+              aria-label="网站地址（必填，可省略 https://）" />
             </div>
 
             <div className="relative">
-              <Type className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-              <input 
-                type="text" 
-                placeholder="网站名称（可选，留空则自动抓取）" 
+              <Input prefix={<Type size={18} />}
+                type="text"
+                placeholder="网站名称（可选，留空则自动抓取）"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 transition-colors"
-              />
+                className="w-full"
+              aria-label="网站名称（可选，留空则自动抓取）" />
             </div>
 
             {/* 图标选择 */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white/60 text-sm">
+                <div className="flex items-center gap-2 text-[var(--ui-text-secondary)] text-sm">
                   <Image size={16} />
                   <span>图标</span>
                 </div>
-                <div className="flex bg-white/5 rounded-lg p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setIconMode('preset')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                      iconMode === 'preset' 
-                        ? 'bg-blue-600 text-white' 
-                        : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    预设图标
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIconMode('url')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                      iconMode === 'url' 
-                        ? 'bg-blue-600 text-white' 
-                        : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    图片URL
-                  </button>
-                </div>
+                <Segmented<'preset' | 'url'> value={iconMode} onChange={setIconMode} options={[{ value: 'preset', label: '预设图标' }, { value: 'url', label: '图片 URL' }]} />
               </div>
 
               {iconMode === 'preset' ? (
-                <div className="grid grid-cols-9 gap-1 max-h-32 overflow-y-auto p-1">
-                  <button
-                    type="button"
+                <div className="grid grid-cols-6 sm:grid-cols-9 gap-1 max-h-32 overflow-y-auto p-1">
+                  <Button type={icon === '' ? 'primary' : 'default'} size="small" aria-pressed={icon === ''}
+                    htmlType="button"
                     onClick={() => setIcon('')}
-                    className={`aspect-square flex items-center justify-center rounded-lg transition-all ${
-                      icon === '' 
-                        ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
-                        : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
-                    }`}
+
                     title="自动获取"
                   >
                     <span className="text-xs">自动</span>
-                  </button>
+                  </Button>
                   {iconOptions.map((option) => {
                     const IconsRecord = Icons as unknown as Record<string, React.ComponentType<{ size?: number }>>;
                     const IconComponent = IconsRecord[option.name];
                     if (!IconComponent) return null;
                     return (
-                      <button
+                      <Button type={icon === option.name ? 'primary' : 'default'} size="small" aria-pressed={icon === option.name} aria-label={option.label}
                         key={option.name}
-                        type="button"
+                        htmlType="button"
                         onClick={() => setIcon(option.name)}
-                        className={`aspect-square flex items-center justify-center rounded-lg transition-all ${
-                          icon === option.name 
-                            ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
-                            : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
-                        }`}
+
                         title={option.label}
                       >
                         <IconComponent size={18} />
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
               ) : (
                 <div className="relative">
-                  <Image className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-                  <input 
-                    type="text" 
-                    placeholder="输入图标图片 URL（如: https://example.com/icon.png）" 
+                  <Input prefix={<Image size={18} />}
+                    type="text"
+                    placeholder="输入图标图片 URL（如: https://example.com/icon.png）"
                     value={icon}
                     onChange={(e) => setIcon(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 transition-colors"
-                  />
+                    className="w-full"
+                  aria-label="输入图标图片 URL（如: https://example.com/icon.png）" />
                 </div>
               )}
             </div>
 
             {groups.length > 0 && (
               <div className="relative">
-                <Folder className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-                <select
-                  value={groupId}
-                  onChange={(e) => setGroupId(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
-                >
-                  <option value="" className="bg-slate-800">未分组</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.id} className="bg-slate-800">{g.name}</option>
-                  ))}
-                </select>
+                <Select aria-label="所属分组" className="w-full" value={groupId} onChange={setGroupId} options={[{ value: '', label: '未分组' }, ...groups.map(g => ({ value: g.id, label: g.name }))]} />
               </div>
             )}
 
             <div className="relative">
-              <LayoutGrid className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-              <select
-                value={displaySize}
-                onChange={(e) => setDisplaySize(e.target.value as any)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
-              >
-                <option value="icon" className="bg-slate-800">极简图标 (最小)</option>
-                <option value="small" className="bg-slate-800">小尺寸 (紧凑列表)</option>
-                <option value="medium" className="bg-slate-800">中尺寸 (标准卡片)</option>
-                <option value="large" className="bg-slate-800">大尺寸 (宽幅卡片)</option>
-                <option value="list" className="bg-slate-800">列表 (横向拉伸)</option>
-              </select>
+              <Select aria-label="卡片尺寸" className="w-full" value={displaySize} onChange={setDisplaySize} options={[
+                { value: 'icon', label: '极简图标 (最小)' }, { value: 'small', label: '小尺寸 (紧凑列表)' },
+                { value: 'medium', label: '中尺寸 (标准卡片)' }, { value: 'large', label: '大尺寸 (宽幅卡片)' }, { value: 'list', label: '列表 (横向拉伸)' },
+              ]} />
             </div>
 
             {/* 背景颜色选择 */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-white/60 text-sm">
+              <div className="flex items-center gap-2 text-[var(--ui-text-secondary)] text-sm">
                 <Palette size={16} />
                 <span>背景颜色</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {colorOptions.map((color) => (
-                  <button
+                  <Button type={bgColor === color.value ? 'primary' : 'default'} aria-pressed={bgColor === color.value} aria-label={color.label}
+                    style={{ background: color.value || undefined, outline: bgColor === color.value ? '2px solid var(--ui-primary)' : undefined, outlineOffset: 2, width: 36, padding: 0 }}
                     key={color.value}
-                    type="button"
+                    htmlType="button"
                     onClick={() => setBgColor(color.value)}
-                    className={`
-                      relative w-10 h-10 rounded-xl transition-all duration-200
-                      ${color.class}
-                      ${bgColor === color.value 
-                        ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-110' 
-                        : 'hover:scale-105 opacity-80 hover:opacity-100'
-                      }
-                    `}
+
                     title={color.label}
                   >
                     {color.value === '' && (
-                      <span className="absolute inset-0 flex items-center justify-center text-white/60 text-xs font-medium">
+                      <span className="absolute inset-0 flex items-center justify-center text-[var(--ui-text-secondary)] text-xs font-medium">
                         默认
                       </span>
                     )}
-                  </button>
+                  </Button>
                 ))}
               </div>
               {/* 自定义颜色输入 */}
@@ -323,26 +251,25 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, groups = [] }:
                   className="w-10 h-10 rounded-xl bg-transparent border border-white/20 cursor-pointer"
                   title="自定义颜色"
                 />
-                <input
+                <Input
                   type="text"
                   placeholder="或输入颜色代码 (如: #ff0000)"
                   value={bgColor}
                   onChange={(e) => setBgColor(e.target.value)}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-blue-500 transition-colors"
-                />
+                  className="flex-1"
+                aria-label="或输入颜色代码 (如: #ff0000)" />
               </div>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-colors disabled:opacity-50 mt-2"
+            <Button type="primary"
+              htmlType="submit"
+              loading={isLoading} disabled={isLoading}
+              className="w-full mt-2"
             >
               {isLoading ? '保存中...' : '保存'}
-            </button>
+            </Button>
           </form>
-        </div>
-      </div>
-    </div>
+
+    </Modal>
   );
 };

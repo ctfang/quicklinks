@@ -52,7 +52,7 @@ export const WeatherBackground = () => {
   const weatherOpacity = isNight ? 'opacity-60' : 'opacity-90';
 
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden bg-slate-900 transition-colors duration-1000 pointer-events-none">
+    <div className="weather-scene absolute inset-0 z-0 overflow-hidden bg-slate-900 transition-colors duration-1000 pointer-events-none">
       
       {/* ===== 时间背景（始终显示，不受天气影响） ===== */}
       {/* 黎明（5-8点） */}

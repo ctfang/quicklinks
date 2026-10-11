@@ -44,6 +44,9 @@ export const Wiki = () => {
   useEffect(() => {
     if (id) {
       setIsLoading(true);
+      setNodes([]);
+      setSelectedNodeId(null);
+      setIsEditing(false);
       getTeamWikiNodes(id).then(data => {
         const nodesList = data ?? [];
         setNodes(nodesList);
@@ -54,8 +57,7 @@ export const Wiki = () => {
         if (firstDoc) {
           setSelectedNodeId(firstDoc.id);
         }
-        setIsLoading(false);
-      });
+      }).catch(() => setNodes([])).finally(() => setIsLoading(false));
     }
   }, [id]);
 
@@ -235,9 +237,9 @@ export const Wiki = () => {
   }
 
   return (
-    <div className="flex-1 flex px-4 py-8 w-full max-w-7xl mx-auto h-full overflow-hidden gap-6 z-40">
+    <div className="wiki-editor flex-1 flex flex-col md:flex-row w-full min-h-[calc(100vh-120px)] overflow-hidden">
       {/* Sidebar (Explorer) */}
-      <div className="w-64 flex-shrink-0 bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl flex flex-col overflow-hidden shadow-2xl">
+      <div className="w-full md:w-64 max-h-[35vh] md:max-h-none flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-white/5 text-xs font-semibold uppercase tracking-wider text-white/80">
           <span>资源管理器</span>
           <div className="flex gap-1">
@@ -252,7 +254,7 @@ export const Wiki = () => {
       </div>
 
       {/* Main Editor Area */}
-      <div className="flex-1 flex flex-col bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+      <div className="min-w-0 flex-1 flex flex-col bg-slate-950 overflow-hidden">
         {selectedNode && selectedNode.type === 'document' ? (
           <>
             {/* Tabs Bar */}
@@ -299,7 +301,7 @@ export const Wiki = () => {
                   spellCheck={false}
                 />
               ) : (
-                <div className="p-8 prose prose-invert max-w-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-a:text-blue-400 hover:prose-a:text-blue-300">
+                <div className="p-8 wiki-prose prose prose-invert max-w-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-a:text-blue-400 hover:prose-a:text-blue-300">
                   {selectedNode.content ? (
                     <ReactMarkdown>{selectedNode.content}</ReactMarkdown>
                   ) : (

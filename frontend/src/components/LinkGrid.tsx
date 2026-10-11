@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { NavLink } from '../services/api';
 import * as Icons from 'lucide-react';
-import { Edit2, Trash2, Plus, ExternalLink, Link as LinkLucide, GripVertical } from 'lucide-react';
+import { Edit2, Trash2, Plus, ExternalLink, ArrowUpRight, GripVertical } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { navigationCardSize, type CardLayout } from '../lib/navigationCard';
 
 function getLetterFromUrl(url: string): string {
   try {
@@ -17,16 +18,18 @@ function getLetterFromUrl(url: string): string {
   }
 }
 
-function NavIcon({
+export function NavIcon({
   name,
   url,
   pixelSize,
   strokeWidth,
+  label,
 }: {
   name: string;
   url: string;
   pixelSize: number;
   strokeWidth: number;
+  label?: string;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const trimmed = (name || '').trim();
@@ -53,7 +56,7 @@ function NavIcon({
   }
 
   // 如果没有匹配的Lucide图标，显示URL首字母
-  const letter = getLetterFromUrl(url);
+  const letter = label?.trim().charAt(0).toUpperCase() || getLetterFromUrl(url);
   return (
     <span
       className="font-bold text-white/90 select-none"
@@ -76,9 +79,23 @@ interface LinkGridProps {
   showActions?: boolean;
   onReorder?: (groupId: string | undefined, links: NavLink[]) => void;
   groupId?: string;
+  cardMode?: 'mixed' | 'uniform';
+  layoutMode?: CardLayout;
 }
 
-export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, onReorder, groupId }: LinkGridProps) => {
+function CardContent({ link, size }: { link: NavLink; size: string }) {
+  let domain = link.url.replace(/^https?:\/\//, '').split('/')[0];
+  try { domain = new URL(link.url).hostname.replace(/^www\./, ''); } catch { /* 保留原地址 */ }
+  return <>
+    <div className="card-body">
+      <div className="navigation-icon"><NavIcon name={link.icon} url={link.url} pixelSize={size === 'large' ? 44 : size === 'medium' ? 32 : 26} strokeWidth={1.6} /></div>
+      {size !== 'icon' && <div className="card-copy"><span className="card-title">{link.title}</span><span className="card-domain">{domain}</span></div>}
+    </div>
+    {size !== 'icon' && <ArrowUpRight className="card-compact-arrow" size={16} />}
+  </>;
+}
+
+export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, onReorder, groupId, cardMode = 'mixed', layoutMode = 'configured' }: LinkGridProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const dragCounter = useRef(0);
@@ -138,9 +155,10 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
   return (
     <div className="w-full">
       {title && (
-        <div className="flex items-center justify-between mb-4 px-1">
+        <div className="navigation-group-heading flex items-center justify-between mb-4 px-1">
           <h3 className="text-sm font-medium text-white/70 flex items-center gap-2">
             {title}
+            {!showActions && <span className="navigation-group-count">{links.length.toString().padStart(2, '0')}</span>}
           </h3>
           {showActions && onAdd && (
             <button 
@@ -159,9 +177,10 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
           <p className="text-sm">暂无导航链接</p>
         </div>
       ) : (
-        <div className="grid grid-cols-12 gap-3 md:gap-4 grid-flow-dense">
+        <div className="navigation-grid grid grid-cols-12 gap-3 md:gap-4 grid-flow-dense">
           {links.map((link, index) => {
-            const size = link.displaySize || 'medium';
+            const configuredSize = navigationCardSize(link.displaySize, index, showActions ? 'configured' : layoutMode);
+            const size = showActions && configuredSize === 'icon' ? 'small' : configuredSize;
             const isDragging = draggedIndex === index;
             const isDragOver = dragOverIndex === index;
             
@@ -169,12 +188,12 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
               <div 
                 key={link.id} 
                 className={cn(
-                  "relative group transition-all duration-300",
-                  size === 'icon' && "w-14 h-14 sm:w-16 sm:h-16 aspect-square",
-                  size === 'small' && "col-span-6 sm:col-span-4 md:col-span-3 lg:col-span-2",
-                  size === 'medium' && "col-span-6 sm:col-span-4 md:col-span-3 lg:col-span-2",
-                  size === 'large' && "col-span-12 sm:col-span-6 md:col-span-4 lg:col-span-3",
-                  size === 'list' && "col-span-12 sm:col-span-12 md:col-span-6 lg:col-span-4",
+                  "relative group min-w-0 transition-all duration-300",
+                  size === 'icon' && "col-span-3 sm:col-span-2 lg:col-span-1 row-span-1",
+                  size === 'small' && "col-span-6 sm:col-span-4 lg:col-span-3 row-span-1",
+                  size === 'medium' && "col-span-6 sm:col-span-4 lg:col-span-3 row-span-2",
+                  size === 'large' && "col-span-12 sm:col-span-8 lg:col-span-6 row-span-2",
+                  size === 'list' && "col-span-12 sm:col-span-12 lg:col-span-6 row-span-1",
                   isDragging && "opacity-50",
                   isDragOver && "scale-105"
                 )}
@@ -187,18 +206,26 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title={size === 'icon' ? link.title : undefined}
+                  title={link.title}
+                  aria-label={link.title}
+                  data-card-size={size}
+                  data-nav-title={link.title}
+                  data-nav-icon={link.icon}
                   draggable={false}
                   className={cn(
-                    "flex items-center w-full h-full rounded-2xl transition-all duration-300 overflow-hidden p-3 shadow-sm",
+                    "navigation-card flex items-center w-full h-full rounded-2xl transition-all duration-300 overflow-hidden p-3 shadow-sm",
+                    !showActions && `card-public card-tone-${index % 3}`,
+                    !showActions && cardMode === 'uniform' && 'card-mode-uniform',
+                    link.bgColor && 'card-custom',
+                    !showActions && !link.bgColor && cardMode === 'mixed' && size === 'large' && 'card-featured',
                     // 晴天背景下增强对比度：使用更深的背景色和更强的边框
                     link.bgColor 
                       ? "" // 自定义背景色时，由style处理
                       : "bg-black/20 hover:bg-black/30 border border-white/10 hover:border-white/25 backdrop-blur-sm",
                     size === 'icon' && "items-center justify-center",
                     size === 'small' && "flex-row gap-3 items-center",
-                    size === 'medium' && "flex-row gap-3 items-center justify-center",
-                    size === 'large' && "flex-row gap-3 items-center",
+                    size === 'medium' && "flex-col gap-3 items-center justify-center text-center",
+                    size === 'large' && "flex-row gap-4 items-center px-5",
                     size === 'list' && "flex-row gap-3 items-center justify-between"
                   )}
                   style={link.bgColor ? {
@@ -206,32 +233,32 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
                     border: '1px solid rgba(255,255,255,0.15)'
                   } : undefined}
                 >
-                  <div className={cn(
-                    "flex items-center justify-center text-white/90 group-hover:text-white transition-colors shrink-0 rounded-lg",
+                  {!showActions ? <CardContent link={link} size={size} /> : <><div className={cn(
+                    "navigation-icon flex items-center justify-center text-white/90 group-hover:text-white transition-colors shrink-0 rounded-lg",
                     // 图标容器始终使用透明背景，避免与按钮背景产生视觉间隙
                     "bg-transparent",
                     size === 'icon' && "w-7 h-7",
-                    size === 'small' && "w-8 h-8",
-                    size === 'medium' && "w-8 h-8",
+                    size === 'small' && "w-10 h-10",
+                    size === 'medium' && "w-12 h-12",
                     size === 'large' && "w-12 h-12 rounded-xl",
                     size === 'list' && "w-10 h-10"
                   )}>
                     <NavIcon
                       name={link.icon}
                       url={link.url}
-                      pixelSize={size === 'icon' || size === 'small' || size === 'medium' ? 18 : 24}
+                      pixelSize={size === 'icon' || size === 'small' ? 18 : 28}
                       strokeWidth={1.5}
                     />
                   </div>
                   
-                  {size !== 'icon' && size !== 'medium' && (
+                  {size !== 'icon' && (
                     <div className={cn(
-                      "flex flex-col overflow-hidden",
+                      "min-w-0 flex flex-col overflow-hidden",
                       size === 'list' && "flex-1"
                     )}>
                       <span className={cn(
                         "font-medium text-white truncate w-full transition-colors drop-shadow-sm",
-                        size === 'small' && "text-xs",
+                        (size === 'small' || size === 'medium') && "text-sm",
                         size === 'large' && "text-base",
                         size === 'list' && "text-sm"
                       )}>
@@ -249,7 +276,7 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
                     <div className="text-white/20 group-hover:text-white/50 transition-colors shrink-0 ml-2">
                       <ExternalLink size={16} />
                     </div>
-                  )}
+                  )}</>}
                 </a>
 
                 {showActions && (
@@ -269,6 +296,7 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
                     )}
                     {/* 编辑按钮 */}
                     <button 
+                      aria-label={`编辑 ${link.title}`}
                       onClick={(e) => { e.stopPropagation(); e.preventDefault(); onEdit?.(link); }}
                       className="p-1.5 text-white/70 hover:text-blue-400 hover:bg-white/10 rounded-md transition-colors bg-slate-900/90 backdrop-blur-md border border-white/20 shadow-xl"
                     >
@@ -276,6 +304,7 @@ export const LinkGrid = ({ title, links, onEdit, onDelete, onAdd, showActions, o
                     </button>
                     {/* 删除按钮 */}
                     <button 
+                      aria-label={`删除 ${link.title}`}
                       onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDelete?.(link.id); }}
                       className="p-1.5 text-white/70 hover:text-red-400 hover:bg-white/10 rounded-md transition-colors bg-slate-900/90 backdrop-blur-md border border-white/20 shadow-xl"
                     >

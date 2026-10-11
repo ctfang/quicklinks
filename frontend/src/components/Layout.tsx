@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Settings as SettingsIcon, LogIn, LogOut, BookOpen, CloudRain, CloudSun, Cloud, Sun, CloudSnow, CloudLightning, ChevronDown, Home, Github } from 'lucide-react';
+import { Settings as SettingsIcon, LogIn, LogOut, BookOpen, CloudRain, CloudSun, Cloud, Sun, CloudSnow, CloudLightning, Home, Github, Layers, UserRound, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AuthModal } from './AuthModal';
-import { Settings } from '../pages/Settings';
+
 import { WeatherBackground } from './WeatherBackground';
 import { WeatherLocationModal } from './WeatherLocationModal';
 import { WeatherInfo } from '../services/api';
@@ -21,7 +21,7 @@ const WeatherIcon = ({ weather }: { weather: string }) => {
 };
 
 export const Layout = () => {
-  const { user, logoutUser, currentTeam, teams, setCurrentTeam, setIsSettingsOpen, currentWeather, weatherLocation } =
+  const { user, logoutUser, currentTeam, teams, setCurrentTeam, currentWeather, weatherLocation } =
     useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
@@ -44,38 +44,37 @@ export const Layout = () => {
   const weatherWidget: WeatherInfo | null = currentWeather;
 
   return (
-    <div className="min-h-screen w-full text-white font-sans flex flex-col relative overflow-hidden bg-slate-900">
+    <div className={cn('navigation-shell min-h-screen w-full text-white font-sans flex flex-col relative overflow-hidden bg-slate-900', location.pathname === '/' && 'homepage-shell')}>
       <WeatherLocationModal open={showWeatherLocationModal} onClose={() => setShowWeatherLocationModal(false)} />
       <WeatherBackground />
       
-      <header className="relative w-full h-20 flex items-center justify-between px-6 lg:px-12 z-50 pt-4">
-        <div className="flex items-center gap-6">
+      <header className="navigation-header z-50">
+        <div className="navigation-header-start">
+          <Link to="/" className="navigation-brand" aria-label="Quicklinks 首页" title="Quicklinks 首页"><Layers size={19} /></Link>
           {user && (
-            <div className="relative z-[60] flex items-center gap-2 bg-black/20 backdrop-blur-md p-1.5 rounded-full border border-white/10 shadow-lg">
+            <div className="navigation-space-switch relative z-[60] flex items-center">
               <button 
                 onClick={() => {
                   setCurrentTeam(null);
                   navigate('/');
                 }}
-                className={cn(
-                  "px-6 py-2 rounded-full text-sm font-medium transition-all duration-300", 
-                  currentTeam === null ? "bg-white/20 text-white shadow-sm" : "text-white/70 hover:text-white hover:bg-white/10"
-                )}
+                aria-pressed={currentTeam === null}
+                aria-label="个人空间"
+                title="个人空间"
               >
-                个人空间
+                <UserRound size={18} />
               </button>
               
               {teams.length > 0 && (
                 <div className="relative" ref={dropdownRef}>
                   <button 
                     onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-                    className={cn(
-                      "px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2", 
-                      currentTeam !== null ? "bg-white/20 text-white shadow-sm" : "text-white/70 hover:text-white hover:bg-white/10"
-                    )}
+                    aria-expanded={showTeamDropdown}
+                    aria-pressed={currentTeam !== null}
+                    aria-label={currentTeam ? `团队空间：${currentTeam.name}` : '团队空间'}
+                    title={currentTeam ? `团队空间：${currentTeam.name}` : '团队空间'}
                   >
-                    {currentTeam ? currentTeam.name : '团队空间'}
-                    <ChevronDown size={14} className={cn("transition-transform duration-300", showTeamDropdown ? "rotate-180" : "")} />
+                    <Users size={18} />
                   </button>
                   
                   {showTeamDropdown && (
@@ -108,55 +107,32 @@ export const Layout = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="navigation-header-end">
           {/* Weather Widget - now powered by backend service with caching */}
           <button
             type="button"
             onClick={() => setShowWeatherLocationModal(true)}
-            className="hidden sm:flex items-center gap-2 text-sm font-medium drop-shadow-md mr-4 hover:bg-white/10 px-3 py-2 rounded-full transition-colors cursor-pointer border-0 bg-transparent text-white"
-            title="点击修改天气城市"
+            className="navigation-weather flex items-center gap-2 transition-colors cursor-pointer border-0 bg-transparent"
+            aria-label="修改天气城市"
+            title={`${weatherWidget ? `${Math.round(weatherWidget.temperature)}°C ${weatherWidget.place}` : weatherLocation.city} · 修改天气城市`}
           >
             <WeatherIcon weather={weatherWidget?.weather1 || '晴'} />
-            <span>
-              {weatherWidget
-                ? `${Math.round(weatherWidget.temperature)}°C ${weatherWidget.place}`
-                : `22°C ${weatherLocation.city}`}
-            </span>
           </button>
 
+          <nav aria-label="主导航" className="flex items-center">
+            {[{ to: '/', label: '导航', icon: Home }, { to: '/wiki', label: '知识库', icon: BookOpen }, { to: '/manage', label: '管理', icon: SettingsIcon }].map(item => (
+              <Link key={item.to} to={item.to} aria-label={item.label} title={item.label} aria-current={(item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)) ? 'page' : undefined} className="flex items-center transition-colors">
+                <item.icon size={18} />
+              </Link>
+            ))}
+          </nav>
           {user ? (
             <>
-              {currentTeam && (
-                <Link 
-                  to={`/wiki/${currentTeam.id}`}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 shadow-sm"
-                >
-                  <BookOpen size={18} />
-                  <span className="hidden sm:inline">团队 Wiki</span>
-                </Link>
-              )}
-              {location.pathname !== '/' ? (
-                <Link 
-                  to="/"
-                  className="p-2.5 rounded-full transition-colors bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 shadow-sm"
-                  title="返回首页"
-                >
-                  <Home size={20} />
-                </Link>
-              ) : (
-                <button 
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="p-2.5 rounded-full transition-colors bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 shadow-sm"
-                  title="设置"
-                >
-                  <SettingsIcon size={20} />
-                </button>
-              )}
               <div className="relative group">
-                <button className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shadow-sm hover:border-white transition-colors">
+                <button aria-label="账号菜单" title="账号菜单" className="navigation-avatar rounded-full overflow-hidden border border-white/20 transition-colors">
                   <img src={user.avatar} alt={user.name} className="w-full h-full object-cover bg-white" />
                 </button>
-                <div className="absolute right-0 top-full pt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right z-50">
+                <div className="absolute right-0 top-full pt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all transform origin-top-right z-50">
                   <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden text-slate-900">
                     <div className="p-4 border-b border-slate-100">
                       <p className="text-sm font-semibold">{user.name}</p>
@@ -178,10 +154,11 @@ export const Layout = () => {
           ) : (
             <button 
               onClick={() => setShowAuthModal(true)}
-              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors shadow-sm"
+              aria-label="登录"
+              title="登录"
+              className="navigation-login flex items-center gap-1.5 font-medium transition-colors"
             >
-              <LogIn size={16} />
-              登录
+              <LogIn size={18} />
             </button>
           )}
         </div>
@@ -205,6 +182,7 @@ export const Layout = () => {
         )}
         <a
           href="https://github.com/ctfang/quicklinks"
+          aria-label="项目源码 GitHub"
           target="_blank"
           rel="noopener noreferrer"
           className={cn(
@@ -218,7 +196,7 @@ export const Layout = () => {
       </footer>
 
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-      <Settings />
+
     </div>
   );
 };

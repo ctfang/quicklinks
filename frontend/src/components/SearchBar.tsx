@@ -50,7 +50,7 @@ export const SearchBar = () => {
       {/* Decorative GIF (Animal playing above the search bar) */}
       <div 
         className={cn(
-          "absolute -top-12 right-12 transition-all duration-500 ease-out pointer-events-none z-10",
+          "search-mascot absolute -top-12 right-12 transition-all duration-500 ease-out pointer-events-none z-10",
           isFocused ? "-translate-y-6 rotate-[15deg] scale-[1.15]" : "translate-y-2 -rotate-[10deg] scale-90 opacity-80"
         )}
       >
@@ -86,6 +86,7 @@ export const SearchBar = () => {
         </div>
         <input
           type="text"
+          aria-label="搜索导航或网页"
           className="flex-1 bg-transparent border-none outline-none text-lg text-slate-800 placeholder:text-slate-500 py-4"
           placeholder={user ? "搜索个人、团队或公共链接..." : `使用 ${searchEngine.name} 搜索...`}
           value={query}
@@ -136,6 +137,8 @@ export const SearchBar = () => {
                 <li key={link.id}>
                   <a 
                     href={link.url} 
+                    data-nav-title={link.title}
+                    data-nav-icon={link.icon}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex items-center gap-4 px-6 py-3 hover:bg-slate-100/80 transition-colors group"
