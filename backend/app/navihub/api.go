@@ -1632,6 +1632,29 @@ func teamMembersDelete(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+type wikiNodeSummary struct {
+	ID           string  `json:"id"`
+	TeamID       string  `json:"teamId"`
+	ParentID     *string `json:"parentId"`
+	Type         string  `json:"type"`
+	Title        string  `json:"title"`
+	DocumentKind string  `json:"documentKind,omitempty"`
+	UpdatedAt    string  `json:"updatedAt"`
+}
+
+// 只读取有界的格式头以识别图标，不把正文装入目录响应。
+func wikiDocumentKind(header string) string {
+	if !strings.HasPrefix(header, "quicklinks-document:v1\n") {
+		return "markdown"
+	}
+	for _, kind := range []string{"word", "sheet", "canvas", "file"} {
+		if strings.Contains(header, `"kind":"`+kind+`"`) {
+			return kind
+		}
+	}
+	return "markdown"
+}
+
 func wikiList(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		jwtUID, ok := requireAuthUserID(c)
@@ -1642,39 +1665,69 @@ func wikiList(db *sql.DB) gin.HandlerFunc {
 		if !assertTeamMember(c, db, tid, jwtUID) {
 			return
 		}
-		rows, err := db.Query(`SELECT id, teamId, parentId, type, title, content, updatedAt FROM wiki_nodes WHERE teamId = ?`, tid)
+		rows, err := db.Query(`SELECT id, teamId, parentId, type, title, LEFT(COALESCE(content,''), 128), updatedAt FROM wiki_nodes WHERE teamId = ?`, tid)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		defer rows.Close()
-		type wn struct {
-			ID        string  `json:"id"`
-			TeamID    string  `json:"teamId"`
-			ParentID  *string `json:"parentId"`
-			Type      string  `json:"type"`
-			Title     string  `json:"title"`
-			Content   string  `json:"content"`
-			UpdatedAt string  `json:"updatedAt"`
-		}
-		list := make([]wn, 0)
+		list := make([]wikiNodeSummary, 0)
 		for rows.Next() {
-			var o wn
-			var pid sql.NullString
-			var content sql.NullString
-			if err := rows.Scan(&o.ID, &o.TeamID, &pid, &o.Type, &o.Title, &content, &o.UpdatedAt); err != nil {
+			var o wikiNodeSummary
+			var header string
+			if err := rows.Scan(&o.ID, &o.TeamID, &o.ParentID, &o.Type, &o.Title, &header, &o.UpdatedAt); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			if pid.Valid {
-				o.ParentID = &pid.String
-			}
-			if content.Valid {
-				o.Content = content.String
+			if o.Type == "document" {
+				o.DocumentKind = wikiDocumentKind(header)
 			}
 			list = append(list, o)
 		}
+		if err := rows.Err(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusOK, list)
+	}
+}
+
+func wikiGet(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		jwtUID, ok := requireAuthUserID(c)
+		if !ok {
+			return
+		}
+		tid, err := wikiNodeTeamID(db, c.Param("id"))
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if !assertTeamMember(c, db, tid, jwtUID) {
+			return
+		}
+		var o struct {
+			wikiNodeSummary
+			Content string `json:"content"`
+		}
+		err = db.QueryRow(`SELECT id, teamId, parentId, type, title, COALESCE(content,''), updatedAt FROM wiki_nodes WHERE id = ? AND teamId = ?`, c.Param("id"), tid).
+			Scan(&o.ID, &o.TeamID, &o.ParentID, &o.Type, &o.Title, &o.Content, &o.UpdatedAt)
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if o.Type == "document" {
+			o.DocumentKind = wikiDocumentKind(o.Content[:min(len(o.Content), 128)])
+		}
+		c.JSON(http.StatusOK, o)
 	}
 }
 

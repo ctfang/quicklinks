@@ -3,21 +3,24 @@ import React, { useState, useEffect } from 'react';
 import { Link as LinkIcon, Type, Image, Palette } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { NavLink, NavGroup } from '../services/api';
+import { navigationCardSize } from '../lib/navigationCard';
 
 interface LinkModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (link: Partial<NavLink>) => Promise<void>;
   initialData?: NavLink | null;
+  initialDisplaySize?: NavLink['displaySize'];
   groups?: NavGroup[];
   initialGroupId?: string;
 }
 
-export const LinkModal = ({ isOpen, onClose, onSave, initialData, initialGroupId, groups = [] }: LinkModalProps) => {
+export const LinkModal = ({ isOpen, onClose, onSave, initialData, initialDisplaySize, initialGroupId, groups = [] }: LinkModalProps) => {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [icon, setIcon] = useState('');
   const [displaySize, setDisplaySize] = useState<NavLink['displaySize']>('icon');
+  const [displaySizeChanged, setDisplaySizeChanged] = useState(false);
   const [groupId, setGroupId] = useState<string>('');
   const [bgColor, setBgColor] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -80,11 +83,12 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, initialGroupId
   ];
 
   useEffect(() => {
+    setDisplaySizeChanged(false);
     if (initialData) {
       setTitle(initialData.title);
       setUrl(initialData.url);
       setIcon(initialData.icon || '');
-      setDisplaySize(initialData.displaySize || 'medium');
+      setDisplaySize(navigationCardSize(initialDisplaySize ?? initialData.displaySize, 0, 'configured'));
       setGroupId(initialData.groupId || '');
       setBgColor(initialData.bgColor || '');
       // 判断当前图标是预设图标还是URL
@@ -99,7 +103,7 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, initialGroupId
       setBgColor('');
       setIconMode('preset');
     }
-  }, [initialData, initialGroupId, isOpen]);
+  }, [initialData, initialDisplaySize, initialGroupId, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,11 +114,11 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, initialGroupId
     try {
       const payload: Partial<NavLink> = {
         url: u,
-        displaySize,
         groupId: groupId || undefined,
         // 显式发送 null 来清除背景色，undefined 会被 JSON.stringify 忽略
         bgColor: bgColor || null,
       };
+      if (!initialData || displaySizeChanged) payload.displaySize = displaySize;
       const t = title.trim();
       if (t) payload.title = t;
       const ic = icon.trim();
@@ -212,10 +216,11 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, initialGroupId
             )}
 
             <div className="relative">
-              <Select aria-label="卡片尺寸" className="w-full" value={displaySize} onChange={setDisplaySize} options={[
+              <Select aria-label="卡片尺寸" className="w-full" value={displaySize} onChange={value => { setDisplaySize(value); setDisplaySizeChanged(true); }} options={[
                 { value: 'icon', label: '极简图标 (最小)' }, { value: 'small', label: '小尺寸 (紧凑列表)' },
                 { value: 'medium', label: '中尺寸 (标准卡片)' }, { value: 'large', label: '大尺寸 (宽幅卡片)' }, { value: 'list', label: '列表 (横向拉伸)' },
               ]} />
+              <p className="text-xs text-slate-500 mt-2">选择文字卡片尺寸并保存后，当前空间自动切换为“按链接设置”布局。</p>
             </div>
 
             {/* 背景颜色选择 */}

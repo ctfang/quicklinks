@@ -47,6 +47,8 @@ func (Routes) GetRoutes() map[*api.Config]func(c *gin.Context) {
 	reg(api.Post("/auth/change-password"), changePassword)
 
 	reg(api.Get("/navigation/guest"), navigationGuest)
+	reg(api.Get("/navigation/floating"), floatingNavigationGet)
+	reg(api.Put("/navigation/floating"), floatingNavigationPut)
 
 	reg(api.Get("/links/popular"), linksPopular)
 	reg(api.Get("/links/personal/:userId"), linksPersonal)
@@ -75,6 +77,7 @@ func (Routes) GetRoutes() map[*api.Config]func(c *gin.Context) {
 	reg(api.Delete("/team-members/:id"), teamMembersDelete)
 
 	reg(api.Get("/wiki/team/:teamId"), wikiList)
+	reg(api.Get("/wiki/:id"), wikiGet)
 	reg(api.Post("/wiki"), wikiCreate)
 	reg(api.Put("/wiki/:id"), wikiUpdate)
 	reg(api.Delete("/wiki/:id"), wikiDelete)

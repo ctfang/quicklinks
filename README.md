@@ -10,6 +10,14 @@ NaviHub 是一个集成了个人/团队导航、小组件定制以及 Wiki 知�
 - **Wiki**：团队文档树与 Markdown 内容。
 - **小组件 (Widgets)**：首页组件配置与同步。
 
+### 知识库前端
+
+知识库入口 `/wiki` 使用独立页面；进入团队后可新建 Markdown、Word 富文本文档、Excel 表格或自由画布，并通过现有团队 Wiki 接口保存。前端分别使用 `@uiw/react-md-editor`、Tiptap、FortuneSheet 和 Excalidraw，无需另外部署文档服务。原有 Markdown 内容继续兼容。
+
+支持导入、编辑和导出 `.docx`、`.xlsx`、`.excalidraw`，支持 Markdown/TXT 导入和 PDF/图片预览下载。Word/Excel 转换支持常见文本、表格和公式，但不能保证复杂 Office 排版、图表、宏及高级公式完全保留。单个导入文件限制 2 MB，保存后的文档内容限制 3 MB；多人同时修改时仍沿用现有保存行为，不提供实时协同编辑。
+
+在 `frontend/` 执行 `npm run lint`、`npm test` 和 `npm run build` 验证。编辑器浏览器验证页使用 `npm run test:knowledge:build` 单独生成，正常生产构建不包含该页。启动项目时，在 `backend/` 执行 `go run .`，使用 3000 端口。
+
 ## 技术栈
 
 | 层级 | 技术 |

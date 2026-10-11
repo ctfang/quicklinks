@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { normalizeFloatingUrl, type FloatingLink } from './floatingNavigation';
 
 export function updateRecentNavigation(current: FloatingLink[], link: FloatingLink): FloatingLink[] {
   const url = normalizeFloatingUrl(link.url);
+  if (current[0]?.url === url && current[0].title === link.title && current[0].icon === link.icon) return current;
   return [{ ...link, id: url, url }, ...current.filter(item => item.url !== url)].slice(0, 8);
 }
 
@@ -23,18 +24,46 @@ export function parseRecentNavigation(raw: string | null): FloatingLink[] {
   } catch { return []; }
 }
 
-export function useRecentNavigation(scope: string) {
-  const key = `navihub_recent_${scope}`;
-  const [stored, setStored] = useState<{ key: string; links: FloatingLink[] } | null>(null);
-  const read = () => {
-    try { return parseRecentNavigation(localStorage.getItem(key)); } catch { return []; }
-  };
-  const links = stored?.key === key ? stored.links : read();
+export const recentNavigationKey = 'navihub_recent_navigation';
+
+export function readRecentNavigation(storage: Storage): FloatingLink[] {
+  const saved = storage.getItem(recentNavigationKey);
+  if (saved !== null) return parseRecentNavigation(saved);
+  // 旧记录没有跨空间的点击时间，迁移时保留各列表内部顺序，合并并去重。
+  const legacy: FloatingLink[] = [];
+  for (let index = 0; index < storage.length; index++) {
+    const key = storage.key(index);
+    if (key && /^navihub_recent_(guest|user_.+|team_.+)$/.test(key)) {
+      legacy.push(...parseRecentNavigation(storage.getItem(key)));
+    }
+  }
+  const links = parseRecentNavigation(JSON.stringify(legacy));
+  try { storage.setItem(recentNavigationKey, JSON.stringify(links)); } catch { /* 无法写入时仍可读取旧记录 */ }
+  return links;
+}
+
+export function useRecentNavigation() {
+  const [links, setLinks] = useState<FloatingLink[]>(() => {
+    try { return readRecentNavigation(localStorage); } catch { return []; }
+  });
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea === localStorage && (event.key === recentNavigationKey || event.key === null)) {
+        setLinks(parseRecentNavigation(event.newValue));
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   const record = (link: FloatingLink) => {
-    let next: FloatingLink[];
-    try { next = updateRecentNavigation(links, link); } catch { return; }
-    setStored({ key, links: next });
-    try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* 无法写入时仍保留当前页面记录 */ }
+    // 函数式更新保留连续点击，重复点击首项不触发列表重绘。
+    setLinks(current => {
+      let next: FloatingLink[];
+      try { next = updateRecentNavigation(current, link); } catch { return current; }
+      if (next === current) return current;
+      try { localStorage.setItem(recentNavigationKey, JSON.stringify(next)); } catch { /* 无法写入时仍保留当前页面记录 */ }
+      return next;
+    });
   };
   return [links, record] as const;
 }

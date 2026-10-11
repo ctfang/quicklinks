@@ -1,5 +1,6 @@
 import { Input, Button, Switch, Alert } from 'antd';
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { getUserWidgets, updateWidgetConfig, WidgetConfig, getTeamMembers, createTeam, updateTeam, deleteTeam, addTeamMember, removeTeamMember, TeamMember, changePassword } from '../services/api';
 import { clearAllNavCache } from '../lib/dataCache';
@@ -15,13 +16,16 @@ export const Settings = ({ section = 'profile' }: { section?: SettingsTab }) => 
   const {
     user,
     teams,
-    loginUser,
+    saveTeam,
+    refreshTeams,
+    setCurrentTeam,
     isAdmin,
     weatherLocation,
     setWeatherLocation,
     searchEngine,
     setSearchEngine,
   } = useAppContext();
+  const navigate = useNavigate();
   const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const activeTab = section;
@@ -32,6 +36,8 @@ export const Settings = ({ section = 'profile' }: { section?: SettingsTab }) => 
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamDesc, setNewTeamDesc] = useState('');
+  const [teamError, setTeamError] = useState('');
+  const [isCreatingTeamPending, setIsCreatingTeamPending] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
 
   // Edit Team State
@@ -101,20 +107,26 @@ export const Settings = ({ section = 'profile' }: { section?: SettingsTab }) => 
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (user && newTeamName) {
-      await createTeam(newTeamName, newTeamDesc, user.id);
-      await loginUser(user); // Refresh teams
+    if (!user || isCreatingTeamPending) return;
+    if (!newTeamName.trim()) { setTeamError('请填写团队名称'); return; }
+    setTeamError('');
+    setIsCreatingTeamPending(true);
+    try {
+      const team = await createTeam(newTeamName.trim(), newTeamDesc.trim(), user.id);
+      saveTeam(team);
       setIsCreatingTeam(false);
       setNewTeamName('');
       setNewTeamDesc('');
-    }
+    } catch (err) {
+      setTeamError(err instanceof Error ? err.message : '创建团队失败，请重试');
+    } finally { setIsCreatingTeamPending(false); }
   };
 
   const handleUpdateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (user && editingTeamId && editTeamName) {
-      await updateTeam(editingTeamId, { name: editTeamName, description: editTeamDesc });
-      await loginUser(user); // Refresh teams
+      const team = await updateTeam(editingTeamId, { name: editTeamName, description: editTeamDesc });
+      saveTeam(team);
       setEditingTeamId(null);
     }
   };
@@ -127,7 +139,7 @@ export const Settings = ({ section = 'profile' }: { section?: SettingsTab }) => 
       onConfirm: async () => {
         await deleteTeam(teamId);
         if (user) {
-          await loginUser(user); // Refresh teams
+          await refreshTeams();
         }
       }
     });
@@ -556,7 +568,7 @@ export const Settings = ({ section = 'profile' }: { section?: SettingsTab }) => 
                 </h2>
                 {!selectedTeamId ? (
                   <Button type="primary"
-                    onClick={() => setIsCreatingTeam(true)}
+                    onClick={() => { setTeamError(''); setIsCreatingTeam(true); }}
                     className="gap-2"
                   >
                     <Plus size={16} />
@@ -576,7 +588,7 @@ export const Settings = ({ section = 'profile' }: { section?: SettingsTab }) => 
                 <form onSubmit={handleCreateTeam} className="space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-200">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-medium">创建新团队</h3>
-                    <Button type="default" htmlType="button" onClick={() => setIsCreatingTeam(false)} ><X size={18} /></Button>
+                    <Button type="default" htmlType="button" disabled={isCreatingTeamPending} onClick={() => setIsCreatingTeam(false)} ><X size={18} /></Button>
                   </div>
                   <Input
                     type="text"
@@ -593,7 +605,8 @@ export const Settings = ({ section = 'profile' }: { section?: SettingsTab }) => 
                     onChange={(e) => setNewTeamDesc(e.target.value)}
                     className="w-full"
                   />
-                  <Button type="primary" htmlType="submit" className="w-full">
+                  {teamError && <Alert type="error" title={teamError} showIcon />}
+                  <Button type="primary" htmlType="submit" loading={isCreatingTeamPending} className="w-full">
                     确认创建
                   </Button>
                 </form>
@@ -693,13 +706,15 @@ export const Settings = ({ section = 'profile' }: { section?: SettingsTab }) => 
                       ) : (
                         <div
                           key={team.id}
-                          className="p-5 rounded-2xl bg-slate-50 border border-slate-200 hover:bg-slate-50 transition-colors group flex justify-between items-center"
+                          className="p-5 rounded-2xl bg-slate-50 border border-slate-200 hover:bg-slate-50 transition-colors group flex flex-wrap gap-4 justify-between items-center"
                         >
                           <div className="flex-1 cursor-pointer" onClick={() => setSelectedTeamId(team.id)}>
                             <h3 className="font-medium text-lg group-hover:text-blue-600 transition-colors">{team.name}</h3>
                             <p className="text-sm text-slate-500 mt-1">{team.description}</p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button onClick={() => { setCurrentTeam(team); navigate('/manage?tab=navigation'); }}>管理导航</Button>
+                            <Button onClick={() => { setCurrentTeam(team); navigate(`/wiki/${team.id}`); }}>维护知识库</Button>
                             <Button type="default"
                               onClick={(e) => {
                                 e.stopPropagation();

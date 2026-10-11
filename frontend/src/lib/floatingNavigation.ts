@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { getFloatingNavigation, saveFloatingNavigation } from '../services/api';
 
-export type FloatingSide = 'left' | 'right';
 export interface FloatingLink {
   id: string;
   title: string;
@@ -9,26 +9,17 @@ export interface FloatingLink {
 }
 export interface FloatingNavigationConfig {
   leftEnabled: boolean;
-  rightEnabled: boolean;
   left: FloatingLink[];
-  right: FloatingLink[];
 }
 
 export function defaultFloatingNavigation(): FloatingNavigationConfig {
   return {
     leftEnabled: true,
-    rightEnabled: true,
     left: [
       { id: 'chatgpt', title: 'ChatGPT', url: 'https://chatgpt.com/', icon: 'https://chatgpt.com/favicon.ico' },
       { id: 'claude', title: 'Claude', url: 'https://claude.ai/', icon: 'https://claude.ai/favicon.ico' },
       { id: 'gemini', title: 'Gemini', url: 'https://gemini.google.com/', icon: 'https://www.gstatic.com/lamda/images/gemini_sparkle_4g_512_lt_f94943af3be039176192d.png' },
       { id: 'deepseek', title: 'DeepSeek', url: 'https://chat.deepseek.com/', icon: 'https://chat.deepseek.com/favicon.ico' },
-    ],
-    right: [
-      { id: 'github', title: 'GitHub', url: 'https://github.com/', icon: 'Github' },
-      { id: 'mdn', title: 'MDN Web Docs', url: 'https://developer.mozilla.org/', icon: 'BookOpen' },
-      { id: 'stackoverflow', title: 'Stack Overflow', url: 'https://stackoverflow.com/', icon: 'MessageSquareCode' },
-      { id: 'huggingface', title: 'Hugging Face', url: 'https://huggingface.co/', icon: 'Bot' },
     ],
   };
 }
@@ -47,10 +38,10 @@ export function parseFloatingNavigation(raw: string | null): FloatingNavigationC
   if (!raw) return defaults;
   try {
     const saved = JSON.parse(raw);
-    const readLinks = (side: FloatingSide) => {
-      if (!Array.isArray(saved[side])) return defaults[side];
+    const readLinks = () => {
+      if (!Array.isArray(saved.left)) return defaults.left;
       const ids = new Set<string>();
-      return saved[side].flatMap((item: unknown) => {
+      return saved.left.flatMap((item: unknown) => {
         if (!item || typeof item !== 'object') return [];
         const link = item as Partial<FloatingLink>;
         if (typeof link.id !== 'string' || !link.id || ids.has(link.id) || typeof link.title !== 'string' || !link.title.trim() || typeof link.url !== 'string') return [];
@@ -61,27 +52,45 @@ export function parseFloatingNavigation(raw: string | null): FloatingNavigationC
         } catch { return []; }
       });
     };
-    return { leftEnabled: saved.leftEnabled !== false, rightEnabled: saved.rightEnabled !== false, left: readLinks('left'), right: readLinks('right') };
+    return { leftEnabled: saved.leftEnabled !== false, left: readLinks() };
   } catch { return defaults; }
 }
 
-export function useFloatingNavigation(scope: string | null) {
-  // 访客固定使用公共默认值，不能读到上一个登录账号的配置。
-  const key = scope ? `navihub_floating_${scope}` : null;
-  const [stored, setStored] = useState<{ key: string; value: FloatingNavigationConfig } | null>(null);
-  const [error, setError] = useState('');
-  let value = defaultFloatingNavigation();
-  if (key) {
-    try { value = parseFloatingNavigation(localStorage.getItem(key)); } catch { /* 当前浏览器禁止存储 */ }
-    if (stored?.key === key) value = stored.value;
-  }
-  const save = (next: FloatingNavigationConfig) => {
-    if (!key) return;
-    setStored({ key, value: next });
+export function useFloatingNavigation(userId: number | null) {
+  const [stored, setStored] = useState<{ userId: number; value: FloatingNavigationConfig } | null>(null);
+  const [status, setStatus] = useState<{ userId: number | null; error: string; ready: boolean; saving: boolean }>({ userId: null, error: '', ready: false, saving: false });
+  const activeUser = useRef(userId);
+  activeUser.current = userId;
+  const saving = useRef(false);
+  useEffect(() => {
+    if (userId === null) return;
+    const controller = new AbortController();
+    setStatus({ userId, error: '', ready: false, saving: false });
+    getFloatingNavigation(controller.signal).then(config => {
+      if (controller.signal.aborted) return;
+      setStored({ userId, value: parseFloatingNavigation(config ? JSON.stringify(config) : null) });
+      setStatus({ userId, error: '', ready: true, saving: false });
+    }).catch(err => {
+      if (!controller.signal.aborted) setStatus({ userId, error: `读取左侧导航失败：${err.message}，请刷新重试。`, ready: false, saving: false });
+    });
+    return () => controller.abort();
+  }, [userId]);
+  const value = stored?.userId === userId ? stored.value : defaultFloatingNavigation();
+  const ready = status.userId === userId && status.ready;
+  const save = async (next: FloatingNavigationConfig) => {
+    if (userId === null || !ready || saving.current) return false;
+    saving.current = true;
+    setStatus({ userId, error: '', ready: true, saving: true });
     try {
-      localStorage.setItem(key, JSON.stringify(next));
-      setError('');
-    } catch { setError('浏览器无法保存设置，本次修改仅在当前页面生效。'); }
+      const config = await saveFloatingNavigation(next);
+      if (activeUser.current !== userId) return false;
+      setStored({ userId, value: config });
+      setStatus({ userId, error: '', ready: true, saving: false });
+      return true;
+    } catch (err) {
+      if (activeUser.current === userId) setStatus({ userId, error: `保存左侧导航失败：${err instanceof Error ? err.message : '请重试'}`, ready: true, saving: false });
+      return false;
+    } finally { saving.current = false; }
   };
-  return [value, save, error] as const;
+  return [value, save, status.userId === userId ? status.error : '', !ready || status.saving] as const;
 }

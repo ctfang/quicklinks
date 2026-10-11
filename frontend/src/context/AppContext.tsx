@@ -12,7 +12,7 @@ import {
   writeSearchEngineToStorage,
   type SearchEngine,
 } from '../lib/searchEngine';
-import { clearUserCache, cacheCurrentUser, getCachedCurrentUser, clearCurrentUserCache } from '../lib/dataCache';
+import { clearUserCache, cacheCurrentUser, getCachedCurrentUser, clearCurrentUserCache, cacheTeams } from '../lib/dataCache';
 
 // 本地存储键名
 const STORAGE_KEYS = {
@@ -40,6 +40,8 @@ interface AppContextType {
   loginUser: (u: User) => Promise<void>;
   logoutUser: () => Promise<void>;
   setCurrentTeam: (team: Team | null) => void;
+  saveTeam: (team: Team) => void;
+  refreshTeams: () => Promise<void>;
   setCurrentProject: (project: Project | null) => void;
   /** 天气展示用省、市，持久化在浏览器 localStorage，默认广东/深圳 */
   weatherLocation: WeatherLocation;
@@ -157,27 +159,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     
-    // 缓存优先：尝试从缓存获取团队数据
-    const cachedTeams = await getUserTeamsWithCache(u.id, { useCache: true });
-    if (cachedTeams) {
-      setTeams(cachedTeams);
-      
-      // 恢复保存的团队选择状态
-      try {
-        const savedTeamId = localStorage.getItem(STORAGE_KEYS.CURRENT_TEAM_ID);
-        if (savedTeamId) {
-          const savedTeam = cachedTeams.find(team => team.id === savedTeamId);
-          if (savedTeam) {
-            setCurrentTeamState(savedTeam);
-          }
-        }
-      } catch {
-        // 忽略 localStorage 读取错误
-      }
-      return; // 有缓存，直接返回，不请求服务器
-    }
-    
-    // 无缓存，请求服务器
+    // 登录或恢复会话时同步服务器团队，避免旧缓存隐藏刚创建的团队。
     const [t, guest] = await Promise.all([getUserTeamsWithCache(u.id, { useCache: false }), getGuestNavigation()]);
     setTeams(t);
     setGuestNavUserId(guest.userId);
@@ -216,7 +198,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             return;
           }
           
-          // 无缓存，请求服务器
+          // 无用户缓存时请求服务器。
           const me = await getMe();
           if (!me) {
             try {
@@ -258,6 +240,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 团队变更不重建登录会话，避免旧缓存和全局加载状态卸载设置表单。
+  const saveTeam = (team: Team) => {
+    if (!user) return;
+    const next = teams.some(item => item.id === team.id)
+      ? teams.map(item => item.id === team.id ? team : item)
+      : [...teams, team];
+    cacheTeams(user.id, next);
+    setTeams(next);
+    if (currentTeam?.id === team.id) setCurrentTeam(team);
+  };
+
+  const refreshTeams = async () => {
+    if (!user) return;
+    const next = await getUserTeamsWithCache(user.id, { useCache: false });
+    setTeams(next);
+    if (currentTeam) setCurrentTeam(next.find(team => team.id === currentTeam.id) || null);
   };
 
   const logoutUser = async () => {
@@ -316,6 +316,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         loginUser,
         logoutUser,
         setCurrentTeam,
+        saveTeam,
+        refreshTeams,
         setCurrentProject,
         weatherLocation,
         setWeatherLocation,

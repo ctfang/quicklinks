@@ -18,6 +18,10 @@ import {
   removeProjectFromCache,
   updateLinksOrderInCache,
 } from '../lib/dataCache';
+import type { FloatingNavigationConfig } from '../lib/floatingNavigation';
+
+export const getFloatingNavigation = (signal?: AbortSignal) => fetchApi<FloatingNavigationConfig | null>('/navigation/floating', { signal });
+export const saveFloatingNavigation = (config: FloatingNavigationConfig) => fetchApi<FloatingNavigationConfig>('/navigation/floating', { method: 'PUT', body: JSON.stringify(config) });
 
 export interface User {
   id: number;
@@ -87,7 +91,8 @@ export interface WikiNode {
   parentId: string | null;
   type: 'folder' | 'document';
   title: string;
-  content: string;
+  content?: string;
+  documentKind?: 'markdown' | 'word' | 'sheet' | 'canvas' | 'file';
   updatedAt: string;
 }
 
@@ -557,6 +562,10 @@ export const updateWidgetConfig = async (userId: number, widgets: WidgetConfig[]
 // Wiki
 export const getTeamWikiNodes = async (teamId: string): Promise<WikiNode[]> => {
   return asArray(await fetchApi<WikiNode[]>(`/wiki/team/${teamId}`));
+};
+
+export const getWikiNode = async (id: string): Promise<WikiNode> => {
+  return fetchApi<WikiNode>(`/wiki/${encodeURIComponent(id)}`);
 };
 
 export const createWikiNode = async (teamId: string, parentId: string | null, type: 'folder' | 'document', title: string): Promise<WikiNode> => {

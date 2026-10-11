@@ -3,26 +3,32 @@ import zhCN from 'antd/locale/zh_CN';
 import { useLocation } from 'react-router-dom';
 import type { PropsWithChildren } from 'react';
 import { StyleProvider } from '@ant-design/cssinjs';
+import { useAppContext } from '../context/AppContext';
+import { useNavigationAppearance } from '../lib/navigationAppearance';
 
-// 所有组件共用设计令牌；路由只决定明暗，不再各自配置控件外观。
+// 所有页面共用当前空间的外观，控件同步明暗与强调色。
 export function DesignProvider({ children }: PropsWithChildren) {
   const { pathname } = useLocation();
-  const dark = pathname !== '/' && !pathname.startsWith('/manage');
+  const { user, currentTeam } = useAppContext();
+  const scope = currentTeam ? `team_${currentTeam.id}` : user ? `user_${user.id}` : 'guest';
+  const [appearance] = useNavigationAppearance(scope);
+  const dark = pathname === '/reset-password' || appearance.style === 'midnight';
+  const accent = appearance.theme === 'ocean' ? (dark ? '#6bd5c4' : '#188b84') : appearance.theme === 'sunset' ? (dark ? '#eeaf85' : '#b86846') : (dark ? '#8ab4ff' : '#2563eb');
   return <StyleProvider layer><ConfigProvider locale={zhCN} componentSize="large" theme={{
     cssVar: { key: dark ? 'quicklinks-dark' : 'quicklinks-light' },
     algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
     token: {
-      colorPrimary: '#2563eb',
-      colorInfo: '#2563eb',
+      colorPrimary: accent,
+      colorInfo: accent,
       borderRadius: 12,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif',
       fontSize: 14,
       controlHeight: 44,
       ...(dark ? {
-        colorBgBase: '#141414',
-        colorBgLayout: '#020617',
-        colorBgContainer: '#1e293b',
-        colorBgElevated: '#0f172a',
+        colorBgBase: '#10141c',
+        colorBgLayout: '#10141c',
+        colorBgContainer: '#1c2330',
+        colorBgElevated: '#1c2330',
         colorText: '#e2e8f0',
         colorTextSecondary: '#94a3b8',
         colorBorder: '#334155',

@@ -1,6 +1,7 @@
 @layer theme, base, antd, components, utilities;
 @import "tailwindcss";
 @import "./styles/navigation.css";
+@import "./styles/knowledge.css";
 
 :root { --ui-primary: #2563eb; }
 .ant-modal {
@@ -95,7 +96,7 @@
 .navigation-management .navigation-sections .space-y-8 > div { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; backdrop-filter: none; }
 .navigation-management .navigation-sections .group\/section { padding-left: 48px; }
 .navigation-management .navigation-sections .space-y-6 .group\/section { background: #f8fafc; border: 0; }
-.navigation-management .navigation-card { background-color: #f8fafc; border-color: #e2e8f0; border-radius: 8px; box-shadow: none; min-height: 88px; justify-content: flex-start; padding-bottom: 28px; }
+.navigation-management .navigation-card { background-color: #f8fafc; border-color: #e2e8f0; border-radius: 8px; box-shadow: none; }
 .navigation-management .navigation-card:hover { transform: none; background-color: #eff6ff; border-color: #93c5fd; box-shadow: none; }
 .navigation-management .navigation-sections [class*="text-white"] { color: #475569; text-shadow: none; }
 .navigation-management .navigation-card [class*="text-white"] { color: #334155; }
@@ -133,4 +134,81 @@
   .workbench-footer { padding: 16px; }
   .workbench-footer span { display: none; }
   .navigation-management .navigation-sections .group\/section { padding-left: 40px; }
+}
+
+/* 导航、知识库和设置共用空间外观及背景。 */
+.homepage-shell { isolation: isolate; }
+.homepage-shell::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at 50% -15%, color-mix(in srgb, var(--nav-accent) 14%, transparent), transparent 65%); }
+.homepage-shell.background-plain::before { background: none; }
+.homepage-shell.background-grid::before { background-image: radial-gradient(var(--nav-line) 1px, transparent 1px); background-size: 18px 18px; }
+.homepage-shell.background-glow::before { background: radial-gradient(ellipse at 10% 10%, #9b94ef28, transparent 40%), radial-gradient(ellipse at 90% 30%, #88b9de2a, transparent 45%), radial-gradient(ellipse at 45% 95%, #8adbc825, transparent 40%); }
+.homepage-shell.background-landscape::before, .homepage-shell.background-taichi::before, .homepage-shell.background-geometry::before, .homepage-shell.background-image::before { background-position: center; background-size: cover; background-repeat: no-repeat; }
+.homepage-shell.background-landscape::before { background-image: linear-gradient(var(--nav-bg), transparent), url('/backgrounds/landscape.svg'); }
+.homepage-shell.background-taichi::before { background-image: linear-gradient(var(--nav-bg), transparent), url('/backgrounds/taichi.svg'); }
+.homepage-shell.background-geometry::before { background-image: linear-gradient(var(--nav-bg), transparent), url('/backgrounds/geometry.svg'); }
+.homepage-shell.background-image::before { background-image: linear-gradient(color-mix(in srgb, var(--nav-bg) 85%, transparent), color-mix(in srgb, var(--nav-bg) 65%, transparent)), var(--navigation-image, url('/backgrounds/landscape.svg')); }
+/* 新增背景与缩略图共用图案，使用透明色叠加以适配三种风格。 */
+.homepage-shell.background-dawn, .background-preview.preview-dawn { --background-pattern: radial-gradient(ellipse at 75% 80%, #f4bb7866, transparent 55%), linear-gradient(165deg, #b9c9ed44, #efb6bc44 55%, #f9deaa44); }
+.homepage-shell.background-forest, .background-preview.preview-forest { --background-pattern: radial-gradient(ellipse at 15% 100%, #4b988b44, transparent 55%), radial-gradient(ellipse at 90% 10%, #a6c78e55, transparent 60%), linear-gradient(135deg, #d2e8d533, #b6d9d833); }
+.homepage-shell.background-waves, .background-preview.preview-waves { --background-pattern: repeating-radial-gradient(ellipse at 0% 110%, transparent 0 38px, #5d9fb322 39px 41px, transparent 42px 78px), linear-gradient(150deg, #acdbe844, #a9c3e533); }
+.homepage-shell.background-dunes, .background-preview.preview-dunes { --background-pattern: radial-gradient(ellipse at 10% 120%, #ca9b6e55 0 35%, transparent 35.5%), radial-gradient(ellipse at 95% 135%, #e0bd8e66 0 50%, transparent 50.5%), linear-gradient(160deg, #e9d4b633, #f2dfc844); }
+.homepage-shell.background-blossom, .background-preview.preview-blossom { --background-pattern: radial-gradient(ellipse at 0% 15%, #e9abc455, transparent 55%), radial-gradient(ellipse at 100% 80%, #baa8df44, transparent 55%), linear-gradient(140deg, #f5dee733, #e8dff333); }
+.homepage-shell.background-stars, .background-preview.preview-stars { --background-pattern: radial-gradient(circle at 20% 25%, #ffffffaa 0 1px, transparent 1.5px), radial-gradient(circle at 75% 60%, #8aa5d888 0 1px, transparent 1.5px), radial-gradient(ellipse at 65% 35%, #9f8ee655, transparent 60%), linear-gradient(145deg, #8aa6d544, #b1a2d944); --background-pattern-size: 83px 97px, 137px 151px, cover, cover; }
+.homepage-shell.background-paper, .background-preview.preview-paper { --background-pattern: repeating-linear-gradient(0deg, #b69b7610 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, #b69b7610 0 1px, transparent 1px 5px), linear-gradient(120deg, #e8dbc633, #f4ead944); }
+.homepage-shell.background-contour, .background-preview.preview-contour { --background-pattern: repeating-radial-gradient(ellipse at 85% 15%, transparent 0 28px, #6d9c9630 29px 30px, transparent 31px 58px), linear-gradient(135deg, #c8dfd633, #cedbea33); }
+.homepage-shell:is(.background-dawn, .background-forest, .background-waves, .background-dunes, .background-blossom, .background-stars, .background-paper, .background-contour)::before { background-image: var(--background-pattern); background-size: var(--background-pattern-size, auto); }
+.background-preview:is(.preview-dawn, .preview-forest, .preview-waves, .preview-dunes, .preview-blossom, .preview-stars, .preview-paper, .preview-contour) { background-color: #f5f7fa; background-image: var(--background-pattern); background-size: var(--background-pattern-size, auto); }
+.homepage-shell.style-midnight::before { opacity: .3; }
+.homepage-shell .navigation-page::before { display: none; }
+.workspace-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 88px 0 100px; color: var(--nav-text); }
+.workspace-heading p { color: var(--nav-accent); font-size: 11px; letter-spacing: .16em; margin-bottom: 12px; }
+.workspace-heading h1 { font-size: 30px; font-weight: 600; letter-spacing: -.04em; margin-bottom: 12px; }
+.workspace-heading > span, .workspace-section-heading p { color: var(--nav-muted); font-size: 14px; }
+.workspace-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 32px 0; padding-bottom: 20px; border-bottom: 1px solid var(--nav-line); }
+.workspace-tabs button { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; color: var(--nav-muted); font-size: 13px; cursor: pointer; }
+.workspace-tabs button:hover { background: var(--nav-icon); color: var(--nav-text); }
+.workspace-tabs button[aria-current='page'] { color: var(--nav-accent); background: var(--nav-tint); }
+.workspace-section-heading { margin-bottom: 24px; }
+.workspace-section-heading h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+.workspace-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; min-height: 340px; border: 1px dashed var(--nav-line); border-radius: 16px; color: var(--nav-muted); background: var(--nav-surface); }
+.knowledge-breadcrumb { display: flex; gap: 12px; margin-bottom: 24px; color: var(--nav-muted); font-size: 13px; }
+.knowledge-breadcrumb a:hover { color: var(--nav-accent); }
+.navigation-scope-selector { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; font-size: 14px; }
+.navigation-scope-selector .ant-select { min-width: 240px; }
+.navigation-scope-selector > span { color: var(--nav-muted); }
+.knowledge-editor-workspace.workspace-page { width: 100%; height: 100dvh; min-height: 0; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.knowledge-editor-workspace .knowledge-breadcrumb { flex-shrink: 0; margin: 0; padding: 12px 20px; border-bottom: 1px solid var(--nav-line); }
+.knowledge-workspace .wiki-editor { border: 1px solid var(--nav-line); border-radius: 16px; background: var(--nav-surface); min-height: calc(100dvh - 220px); box-shadow: var(--nav-shadow); }
+.knowledge-editor-workspace .wiki-editor { flex: 1; min-height: 0; border: 0; border-radius: 0; box-shadow: none; }
+.wiki-editor .wiki-sidebar { min-height: 0; }
+.wiki-editor .wiki-content { min-height: 0; }
+.wiki-editor .wiki-toolbar { flex-shrink: 0; flex-wrap: wrap; gap: 8px; }
+.wiki-editor .wiki-tree-actions { display: flex; }
+.knowledge-workspace [class*='bg-slate-'], .knowledge-workspace [class*='bg-black/'], .knowledge-workspace [class*='bg-white/'] { background-color: var(--nav-surface); }
+.knowledge-workspace [class*='text-white'], .knowledge-workspace .wiki-prose, .knowledge-workspace .wiki-prose h1, .knowledge-workspace .wiki-prose h2 { color: var(--nav-text); }
+.knowledge-workspace [class*='text-white/'], .knowledge-workspace [class*='text-indigo-'] { color: var(--nav-muted); }
+.knowledge-workspace [class*='border-white/'], .knowledge-workspace [class*='border-slate-'] { border-color: var(--nav-line); }
+.knowledge-workspace button.bg-blue-600 { color: #fff; }
+.knowledge-workspace .wiki-prose pre { background: var(--nav-icon); border-color: var(--nav-line); }
+.knowledge-workspace .wiki-prose a { color: var(--nav-accent); }
+.knowledge-workspace .wiki-prose blockquote { color: var(--nav-muted); border-color: var(--nav-accent); }
+.knowledge-workspace .ant-card { background: var(--nav-surface); border-color: var(--nav-line); box-shadow: var(--nav-shadow); backdrop-filter: blur(16px); }
+.settings-workspace .settings-panel, .settings-workspace .appearance-settings, .settings-workspace [class*='bg-white'], .settings-workspace .navigation-management .navigation-sections .group\/section, .settings-workspace .navigation-management .navigation-sections > div > .space-y-6, .settings-workspace .navigation-management .navigation-sections .space-y-8 > div { background: var(--nav-surface); border-color: var(--nav-line); color: var(--nav-text); box-shadow: var(--nav-shadow); }
+.settings-workspace [class*='bg-slate-50'], .settings-workspace [class*='bg-slate-100'], .settings-workspace .navigation-card { background-color: var(--nav-icon); border-color: var(--nav-line); }
+.settings-workspace [class*='text-slate-900'], .settings-workspace [class*='text-slate-800'], .settings-workspace [class*='text-slate-700'], .settings-workspace [class*='text-white'], .settings-workspace .appearance-settings h2 { color: var(--nav-text); }
+.settings-workspace [class*='text-slate-500'], .settings-workspace [class*='text-slate-400'], .settings-workspace [class*='text-white/'] { color: var(--nav-muted); }
+.settings-workspace [class*='border-slate-'] { border-color: var(--nav-line); }
+.settings-workspace .settings-panel input:not([type='checkbox']), .settings-workspace .settings-panel textarea { background: var(--nav-card); color: var(--nav-text); }
+.settings-workspace button.bg-blue-600, .settings-workspace button.bg-red-600 { color: #fff; }
+.background-preview.preview-landscape { background: url('/backgrounds/landscape.svg') center / cover; }
+.background-preview.preview-taichi { background: url('/backgrounds/taichi.svg') center / cover; }
+.background-preview.preview-geometry { background: url('/backgrounds/geometry.svg') center / cover; }
+.background-preview.preview-image { background: linear-gradient(135deg, #c2dcd6, #c9d2eb 50%, #efdfc9); }
+@media (max-width: 767px) {
+  .workspace-page { width: calc(100% - 32px); padding-top: 72px; }
+  .navigation-header-start, .navigation-header-end { gap: 0; }
+  .navigation-header .navigation-weather { display: none; }
+  .workspace-tabs { gap: 4px; margin-top: 24px; }
+  .workspace-tabs button { font-size: 12px; padding: 8px 10px; }
+  .knowledge-workspace > div:not(.wiki-editor):not(.knowledge-breadcrumb) { padding: 12px 0; }
 }

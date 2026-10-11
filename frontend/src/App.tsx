@@ -21,9 +21,9 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
+            <Route path="manage" element={<Management />} />
           </Route>
-          <Route path="manage" element={<Management />} />
-          <Route path="wiki" element={<KnowledgeLayout />}>
+          <Route path="/wiki" element={<KnowledgeLayout />}>
             <Route index element={<Knowledge />} />
             <Route path=":id" element={<Wiki />} />
           </Route>

@@ -15,6 +15,13 @@ type User struct {
 
 func (User) TableName() string { return "users" }
 
+type FloatingNavigation struct {
+	UserID uint64 `gorm:"primaryKey;autoIncrement:false;column:userId;type:bigint unsigned"`
+	Config string `gorm:"column:config;type:mediumtext;not null"`
+}
+
+func (FloatingNavigation) TableName() string { return "floating_navigation" }
+
 type Team struct {
 	ID          string `gorm:"primaryKey;column:id;type:varchar(64)"`
 	Name        string `gorm:"column:name;type:varchar(255);not null"`

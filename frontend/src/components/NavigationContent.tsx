@@ -27,7 +27,7 @@ import { LinkModal } from './LinkModal';
 import { ProjectModal } from './ProjectModal';
 import { GroupModal } from './GroupModal';
 import { ConfirmModal } from './ConfirmModal';
-import { NavigationAppearanceSettings, NavigationAppearanceQuickSwitch, FloatingNavigation } from './NavigationAppearance';
+import { NavigationAppearanceQuickSwitch, FloatingNavigation } from './NavigationAppearance';
 import { useNavigationAppearance } from '../lib/navigationAppearance';
 import { useFloatingNavigation } from '../lib/floatingNavigation';
 import { useRecentNavigation } from '../lib/recentNavigation';
@@ -39,8 +39,8 @@ export const NavigationContent = ({ management = false }: { management?: boolean
   const isEditMode = management && Boolean(user);
   const scope = currentTeam ? `team_${currentTeam.id}` : user ? `user_${user.id}` : 'guest';
   const [appearance, setAppearance] = useNavigationAppearance(scope);
-  const [floatingNavigation] = useFloatingNavigation(user ? scope : null);
-  const [recentNavigation, recordNavigation] = useRecentNavigation(user ? scope : 'guest');
+  const [floatingNavigation] = useFloatingNavigation(user?.id ?? null);
+  const [recentNavigation, recordNavigation] = useRecentNavigation();
   const recordClick = (event: React.MouseEvent) => {
     if (management || (event.type === 'auxclick' && event.button !== 1)) return;
     const anchor = (event.target as Element).closest<HTMLAnchorElement>('a[data-nav-title]');
@@ -56,6 +56,7 @@ export const NavigationContent = ({ management = false }: { management?: boolean
   // Link Modal State
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<NavLink | null>(null);
+  const [editingDisplaySize, setEditingDisplaySize] = useState<NavLink['displaySize']>();
   const [addingToGroupId, setAddingToGroupId] = useState<string | undefined>(undefined);
   const [addingToProjectId, setAddingToProjectId] = useState<string | undefined>(undefined);
 
@@ -181,9 +182,10 @@ export const NavigationContent = ({ management = false }: { management?: boolean
     setIsLinkModalOpen(true);
   };
 
-  const handleEditLink = (link: NavLink) => {
+  const handleEditLink = (link: NavLink, size: NavLink['displaySize']) => {
     setAddingToGroupId(undefined);
     setEditingLink(link);
+    setEditingDisplaySize(size);
     setAddingToProjectId(link.projectId);
     setIsLinkModalOpen(true);
   };
@@ -232,6 +234,10 @@ export const NavigationContent = ({ management = false }: { management?: boolean
       const createdLink = await addLinkWithCache(newLink, context);
       // 添加新链接到本地状态
       setLinks(prevLinks => [...prevLinks, createdLink]);
+    }
+    // 明确选择卡片尺寸后按保存值展示，避免自动布局再次覆盖尺寸。
+    if (linkData.displaySize && linkData.displaySize !== 'icon' && appearance.layoutMode !== 'configured') {
+      setAppearance({ ...appearance, layoutMode: 'configured' });
     }
   };
 
@@ -426,7 +432,6 @@ export const NavigationContent = ({ management = false }: { management?: boolean
     <div onClickCapture={recordClick} onAuxClickCapture={recordClick} className={`${management ? 'navigation-management' : `navigation-page theme-${appearance.theme} style-${appearance.style} background-${appearance.background} layout-${appearance.layoutMode} px-5 md:px-24 pb-28 pt-8`} flex-1 flex flex-col items-center w-full mx-auto relative`}>
       {!management && <FloatingNavigation value={floatingNavigation} recent={recentNavigation} />}
       {!management && <div className="navigation-appearance-dock"><NavigationAppearanceQuickSwitch value={appearance} onChange={setAppearance} /></div>}
-      {management && <div className="w-full max-w-6xl mb-8"><NavigationAppearanceSettings value={appearance} onChange={setAppearance} /></div>}
       {!management ? <NavigationLibrary links={links} groups={groups} projects={projects} appearance={appearance} loading={loading} error={error} /> : <div className="w-full flex flex-col items-center">
         {error && <p role="alert" className="mb-4 text-red-300">{error}</p>}
         {loading && <p role="status" className="mb-4 text-white/60">正在加载导航…</p>}
@@ -486,7 +491,7 @@ export const NavigationContent = ({ management = false }: { management?: boolean
                           </div>
                           
                           <div className="w-full">
-                            {renderGroupedLinks(projectLinks, projectGroups, project.id, "项目导航")}
+                            {renderGroupedLinks(projectLinks, projectGroups, project.id)}
                           </div>
                         </div>
                       );
@@ -520,6 +525,7 @@ export const NavigationContent = ({ management = false }: { management?: boolean
         onClose={() => setIsLinkModalOpen(false)}
         onSave={handleSaveLink}
         initialData={editingLink || undefined}
+        initialDisplaySize={editingDisplaySize}
         initialGroupId={addingToGroupId}
         groups={groups.filter(g => g.projectId === addingToProjectId)}
       />

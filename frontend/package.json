@@ -8,30 +8,57 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf ../backend/dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "node --test tests/*.test.cjs",
+    "test:knowledge:build": "vite build --config tests/vite.knowledge.config.ts --logLevel warn"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^2.1.2",
+    "@excalidraw/excalidraw": "^0.18.1",
+    "@fortune-sheet/react": "^1.0.4",
     "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
+    "@tiptap/extension-image": "^3.31.4",
+    "@tiptap/extension-table": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
+    "@uiw/react-md-editor": "^4.1.2",
     "@vitejs/plugin-react": "^5.0.4",
     "antd": "^6.6.5",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "docx": "^9.10.0",
+    "dompurify": "^3.4.16",
     "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
     "js-md5": "^0.8.3",
     "lucide-react": "^0.546.0",
+    "mammoth": "^1.13.0",
     "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.14.1",
+    "rehype-sanitize": "^6.0.0",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.12"
+  },
+  "overrides": {
+    "@excalidraw/excalidraw": {
+      "nanoid": "^3.3.20",
+      "sass": "^1.105.1"
+    },
+    "@excalidraw/mermaid-to-excalidraw": {
+      "nanoid": "^5.1.16"
+    },
+    "dagre-d3-es": {
+      "lodash-es": "^4.18.1"
+    }
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
