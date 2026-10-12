@@ -5,7 +5,7 @@ import { Settings as SettingsIcon, LogIn, LogOut, BookOpen, CloudRain, CloudSun,
 import { cn } from '../lib/utils';
 import { AuthModal } from './AuthModal';
 import { Dropdown } from 'antd';
-import { safeBackgroundImage, useNavigationAppearance } from '../lib/navigationAppearance';
+import { getThemePack, safeBackgroundImage, useNavigationAppearance } from '../lib/navigationAppearance';
 import type { CSSProperties } from 'react';
 
 
@@ -30,6 +30,7 @@ export const Layout = () => {
   const navigate = useNavigate();
   const scope = currentTeam ? `team_${currentTeam.id}` : user ? `user_${user.id}` : 'guest';
   const [appearance] = useNavigationAppearance(scope);
+  const pack = location.pathname === '/' ? getThemePack(appearance.themePack) : undefined;
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showWeatherLocationModal, setShowWeatherLocationModal] = useState(false);
   const selectSpace = (id: string) => {
@@ -42,7 +43,10 @@ export const Layout = () => {
   const weatherWidget: WeatherInfo | null = currentWeather;
 
   return (
-    <div className={`navigation-shell homepage-shell theme-${appearance.theme} style-${appearance.style} background-${appearance.background} min-h-screen w-full font-sans flex flex-col relative`} style={{ '--navigation-image': safeBackgroundImage(appearance.backgroundImage) ? `url(${JSON.stringify(safeBackgroundImage(appearance.backgroundImage))})` : undefined } as CSSProperties}>
+    <div className={`navigation-shell homepage-shell theme-${appearance.theme} style-${appearance.style} background-${appearance.background} ${pack ? `theme-pack-active pack-${appearance.themePack}` : ''} min-h-screen w-full font-sans flex flex-col relative`} style={{
+      '--navigation-image': safeBackgroundImage(appearance.backgroundImage) ? `url(${JSON.stringify(safeBackgroundImage(appearance.backgroundImage))})` : undefined,
+      ...(pack ? { '--nav-bg': pack.bg, '--nav-surface': pack.surface, '--nav-card': pack.card, '--nav-text': pack.text, '--nav-muted': pack.muted, '--nav-accent': pack.accent, '--nav-line': pack.line, '--nav-icon': pack.icon, '--nav-tint': `${pack.accent}18`, '--pack-radius': `${pack.radius}px`, '--pack-shade': pack.shade, '--pack-wallpaper': `url('${pack.wallpaper}')` } : {}),
+    } as CSSProperties}>
       <WeatherLocationModal open={showWeatherLocationModal} onClose={() => setShowWeatherLocationModal(false)} />
 
 

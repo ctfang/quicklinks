@@ -1,0 +1,153 @@
+/* 套装覆盖材质与控件造型，链接尺寸和原始配色仍保存在链接数据中。 */
+.homepage-shell.theme-pack-active:not(.pack-custom)::before { background-image: var(--pack-shade), var(--pack-wallpaper); background-position: center; background-size: cover; background-repeat: no-repeat; opacity: 1; }
+.homepage-shell.theme-pack-active { --pack-search-radius: var(--pack-radius); --pack-control-bg: var(--nav-surface); --pack-shadow: 0 8px 28px #142b3526; --pack-card-bg: var(--nav-card); }
+.homepage-shell.theme-pack-active .site-card { background: var(--pack-card-bg); border-radius: var(--pack-radius); border: 1px solid var(--nav-line); border-left-color: color-mix(in srgb, var(--link-tint, var(--nav-accent)) 45%, var(--nav-line)); color: var(--nav-text); box-shadow: var(--pack-shadow); backdrop-filter: blur(18px); }
+.homepage-shell.theme-pack-active .site-card:is(:hover, :focus-visible) { border-color: var(--nav-accent); box-shadow: 0 10px 30px color-mix(in srgb, var(--nav-accent) 22%, transparent); }
+.homepage-shell.theme-pack-active .site-card .site-domain { color: var(--nav-muted); text-shadow: none; }
+.homepage-shell.theme-pack-active .site-card.size-medium.has-custom-color:is(:hover, :focus-visible) .site-domain { color: var(--nav-muted); }
+.homepage-shell.theme-pack-active .site-card .site-name { color: var(--nav-text); text-shadow: none; }
+.homepage-shell.theme-pack-active .site-icon { border: 1px solid var(--nav-line); background: var(--nav-icon); color: var(--nav-accent); border-radius: calc(var(--pack-radius) * .7); }
+.homepage-shell.theme-pack-active .site-card.size-icon { border-radius: calc(var(--pack-radius) * .75); }
+.homepage-shell.theme-pack-active .site-card.size-icon .site-icon { border: 0; background: transparent; }
+.homepage-shell.theme-pack-active .site-card.size-medium:not(.navigation-card-slot) { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; }
+.homepage-shell.theme-pack-active .site-card.size-medium:not(.navigation-card-slot) > .site-icon { position: relative; inset: auto; width: 72px; height: 72px; min-height: 72px; border-radius: calc(var(--pack-radius) * .7); background: var(--nav-icon); color: var(--nav-accent); }
+.homepage-shell.theme-pack-active .site-card.size-medium:not(.navigation-card-slot) > .site-icon :is(img, svg) { width: 54px; height: 54px; padding: 4px; }
+.homepage-shell.theme-pack-active .site-card.size-medium:not(.navigation-card-slot) > .site-icon > span { font-size: 46px; }
+.homepage-shell.theme-pack-active .site-card.size-medium .site-copy { width: 100%; flex: 0; color: var(--nav-text); }
+.homepage-shell.theme-pack-active .site-card.size-medium::after { display: none; }
+.homepage-shell.theme-pack-active .site-card .site-arrow { color: var(--nav-accent); }
+.homepage-shell.theme-pack-active .library-search { border-radius: var(--pack-search-radius); border: 1px solid var(--nav-line); background: var(--pack-control-bg); box-shadow: var(--pack-shadow); backdrop-filter: blur(22px); }
+.homepage-shell.theme-pack-active .search-web { background: var(--nav-icon); border: 1px solid var(--nav-line); border-radius: calc(var(--pack-radius) * .55); padding: 7px 10px; }
+.homepage-shell.theme-pack-active .search-web:hover { background: var(--nav-tint); border-color: var(--nav-accent); }
+.homepage-shell.theme-pack-active .search-clear { width: 28px; height: 28px; border-radius: 50%; background: var(--nav-icon); }
+.homepage-shell.theme-pack-active .library-search kbd { border-radius: 6px; background: var(--nav-icon); }
+.homepage-shell.theme-pack-active .daily-weather-button { padding: 14px 20px; background: var(--pack-control-bg); border: 1px solid var(--nav-line); border-radius: var(--pack-radius); box-shadow: var(--pack-shadow); backdrop-filter: blur(16px); }
+.homepage-shell.theme-pack-active .daily-weather-reading > span { font-size: 38px; }
+.homepage-shell.theme-pack-active .daily-weather p { margin-top: 8px; font-size: 13px; }
+.homepage-shell.theme-pack-active .library-daily { gap: 26px; margin-bottom: 30px; }
+.homepage-shell.theme-pack-active .daily-divider { display: none; }
+.homepage-shell.theme-pack-active .clock-widget p { text-shadow: 0 1px 8px color-mix(in srgb, var(--nav-bg) 65%, transparent); }
+.homepage-shell.theme-pack-active .section-heading h2 { font-size: 13px; letter-spacing: .08em; }
+.homepage-shell.theme-pack-active .navigation-header { padding-top: 8px; height: 48px; }
+.homepage-shell.theme-pack-active .navigation-header :is(.navigation-brand, nav a, .navigation-login, .navigation-weather, .navigation-space-switch > button) { background: var(--pack-control-bg); border: 1px solid var(--nav-line); border-radius: calc(var(--pack-radius) * .65); color: var(--nav-text); box-shadow: var(--pack-shadow); backdrop-filter: blur(14px); }
+.homepage-shell.theme-pack-active .navigation-header :is(nav a, button):hover { border-color: var(--nav-accent); background: var(--nav-icon); }
+.homepage-shell.theme-pack-active .floating-link { background: var(--pack-control-bg); border: 1px solid var(--nav-line); border-radius: calc(var(--pack-radius) * .65); box-shadow: var(--pack-shadow); color: var(--nav-text); backdrop-filter: blur(16px); }
+.homepage-shell.theme-pack-active .floating-link:hover { border-color: var(--nav-accent); background: var(--nav-icon); }
+.homepage-shell.theme-pack-active .appearance-quick-switch { border-radius: var(--pack-radius); box-shadow: var(--pack-shadow); background: var(--pack-control-bg); }
+.homepage-shell.theme-pack-active footer a { background: var(--pack-control-bg); border-radius: var(--pack-radius); border: 1px solid var(--nav-line); padding: 7px 12px; backdrop-filter: blur(12px); }
+
+/* 双鱼：青玉与水墨的流线轮廓，米白按钮与墨色表面形成阴阳对照。 */
+.homepage-shell.pack-yin-yang { --pack-card-bg: linear-gradient(130deg, #2a5149cc, #142f2bdb); --pack-control-bg: linear-gradient(120deg, #163a32ed, #284c42dc); --pack-shadow: inset 0 1px 0 #e7ebcb26, 0 8px 26px #001c2150; --pack-search-radius: 32px 12px 32px 12px; }
+.homepage-shell.pack-yin-yang .site-card { --nav-text: #f1f0db; --nav-muted: #c0cdbd; --nav-accent: #d4d9ac; --nav-line: #a6bc9133; --nav-icon: #a8c09b26; --ink-blend: multiply; border-radius: 16px 6px 20px 6px; background-color: #33554a; background-image: linear-gradient(90deg, #173a32cc, #173a324d 45%, transparent 72%), var(--ink-art); background-blend-mode: normal, var(--ink-blend); background-size: cover; background-position: right center; border: 1px solid #a6bc9133; border-left-color: color-mix(in srgb, var(--link-tint, #a6bc91) 35%, #33554a); box-shadow: inset 0 0 12px #061d2326, inset 0 1px 0 #dce5bf1a, 0 6px 18px #001c213b; }
+.homepage-shell.pack-yin-yang .site-card::before { display: none; }
+.homepage-shell.pack-yin-yang .site-card[data-ink-scene='landscape'] { --ink-art: url('/backgrounds/ink-card-landscape-v1.png'); border-radius: 16px 6px 20px 6px; }
+.homepage-shell.pack-yin-yang .site-card[data-ink-scene='fish'] { --ink-art: url('/backgrounds/ink-card-fish-dark-v1.png'); --ink-blend: normal; border-radius: 24px 8px 24px 8px; }
+.homepage-shell.pack-yin-yang .site-card[data-ink-scene='shrimp'] { --ink-art: url('/backgrounds/ink-card-shrimp-dark-v1.png'); --ink-blend: normal; border-radius: 10px 22px 10px 22px; }
+.homepage-shell.pack-yin-yang .site-card[data-ink-scene='splash'] { --ink-art: url('/backgrounds/ink-card-splash-dark-v1.png'); --ink-blend: normal; border-radius: 20px 7px 20px 7px; }
+.homepage-shell.pack-yin-yang .site-card[data-ink-scene='ripples'] { --ink-art: url('/backgrounds/ink-card-ripples-dark-v1.png'); --ink-blend: normal; border-radius: 26px 10px 26px 10px; }
+.homepage-shell.pack-yin-yang .site-card[data-ink-scene='trees'] { --ink-art: url('/backgrounds/ink-card-trees-v1.png'); border-radius: 7px 18px 7px 18px; }
+.homepage-shell.pack-yin-yang .site-card[data-ink-scene='grasses'] { --ink-art: url('/backgrounds/ink-card-grasses-v1.png'); border-radius: 18px 6px 6px 18px; }
+.homepage-shell.pack-yin-yang .site-card[data-ink-scene='lotus'] { --ink-art: url('/backgrounds/ink-card-lotus-v1.png'); border-radius: 22px 22px 8px 8px; }
+.homepage-shell.pack-yin-yang .site-card[data-ink-scene='river'] { --ink-art: url('/backgrounds/ink-card-river-v1.png'); border-radius: 8px 20px 20px 8px; }
+.homepage-shell.pack-yin-yang .site-card .site-icon { background: #a8c09b26; border-color: #a6bc9133; }
+.homepage-shell.pack-yin-yang .site-card .site-name { font-family: Georgia, 'Songti SC', 'SimSun', serif; }
+.homepage-shell.pack-yin-yang .site-card.size-icon { background-image: linear-gradient(#173a3233, #173a3233), var(--ink-art); }
+.homepage-shell.theme-pack-active.pack-yin-yang .library-search { background-color: #18382f; background-image: linear-gradient(90deg, #102a24da, #102a2499 60%, #102a2426), url('/backgrounds/ink-search-dark-v1.png'); background-size: cover; background-position: center; border-color: #d4d9ac49; box-shadow: inset 0 1px 0 #dde6be33, inset 0 -1px 0 #061b1766, 0 8px 28px #001c214d; }
+.homepage-shell.pack-yin-yang .site-icon { border-radius: 50%; background: linear-gradient(145deg, #dfe3c62b, #71978a20); border-color: #d4d9ac40; }
+.homepage-shell.pack-yin-yang .search-web { background: #e4e5c8; color: #17382f; border-radius: 24px 8px 24px 8px; border-color: #f5f5db; }
+.homepage-shell.pack-yin-yang .clock-time { font-family: Georgia, 'Songti SC', serif; font-weight: 400; text-shadow: 0 2px 24px #00000050; }
+.homepage-shell.pack-yin-yang .daily-weather-button { border-radius: 32px 12px 32px 12px; }
+.homepage-shell.pack-yin-yang .section-heading h2 { padding: 5px 12px; border-left: 2px solid #d4d9ac; background: #143b2fbb; border-radius: 0 14px 14px 0; }
+.homepage-shell.pack-yin-yang .navigation-header :is(nav a, button), .homepage-shell.pack-yin-yang .floating-link { border-radius: 50%; }
+
+/* 深林：苔木表面和叶片弧线，按钮沿用自然生长的非对称曲线。 */
+.homepage-shell.pack-woodland { --pack-card-bg: linear-gradient(140deg, #3c4e2dd9, #163c2de0); --pack-control-bg: linear-gradient(120deg, #314a29e8, #17382be8); --pack-shadow: inset 0 1px 0 #d5e5a52b, 0 4px 0 #0e261a55, 0 10px 26px #091a1555; --pack-search-radius: 12px 34px 12px 34px; }
+.homepage-shell.pack-woodland .site-card { border-radius: 8px 28px 8px 28px; border-bottom: 3px solid #597d3c66; }
+.homepage-shell.pack-woodland .site-card::before { content: ''; position: absolute; right: 8px; top: 8px; width: 32px; height: 15px; pointer-events: none; border: 1px solid #c4da941a; border-radius: 0 100% 0 100%; transform: rotate(-28deg); }
+.homepage-shell.pack-woodland .site-icon { background: linear-gradient(140deg, #8794513b, #294b321a); border-radius: 8px 18px 8px 18px; border-color: #a8bf7540; }
+.homepage-shell.pack-woodland .search-web { border-radius: 8px 20px 8px 20px; background: #bfd098; color: #233a22; border-bottom: 2px solid #68824c; }
+.homepage-shell.pack-woodland .clock-time { font-weight: 400; text-shadow: 0 2px 20px #07170c80; }
+.homepage-shell.pack-woodland .daily-weather-button { border-radius: 12px 34px 12px 34px; }
+.homepage-shell.pack-woodland .section-heading h2 { padding: 5px 12px; background: #1a3425d9; border-bottom: 2px solid #8eab6170; border-radius: 4px 14px 4px 14px; }
+.homepage-shell.pack-woodland .navigation-header :is(nav a, button), .homepage-shell.pack-woodland .floating-link { border-radius: 6px 18px 6px 18px; }
+
+/* 下雨：斜面玻璃反光、凝结水珠和冷色灯边。 */
+.homepage-shell.pack-rain { --pack-card-bg: linear-gradient(135deg, #d6f6ff18, #163542b8 48%, #7fc7d81c); --pack-control-bg: linear-gradient(120deg, #234f60d9, #173b49d9); --pack-shadow: inset 0 1px 0 #dafaff3b, 0 8px 22px #06192355; --pack-search-radius: 20px; }
+.homepage-shell.pack-rain .site-card::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 89% 18%, #e2fbff45 0 2px, #95d4e515 3px 5px, transparent 6px), radial-gradient(ellipse at 78% 31%, #dafaff33 0 1px, transparent 3px), radial-gradient(ellipse at 93% 45%, #dafaff33 0 2px, transparent 4px); }
+.homepage-shell.pack-rain .library-search { border-top: 2px solid #a9d7df77; border-bottom: 2px solid #071e2d88; }
+.homepage-shell.pack-rain .site-icon { box-shadow: inset 0 1px 0 #e7ffff30, 0 3px 8px #00132225; }
+.homepage-shell.pack-rain .clock-time { font-weight: 300; letter-spacing: -.07em; text-shadow: 0 0 26px #94c6d54d; }
+.homepage-shell.pack-rain .section-heading h2 { padding-left: 10px; border-left: 2px solid var(--nav-accent); }
+.homepage-shell.pack-rain .daily-weather-button { border-radius: 24px 24px 24px 8px; }
+
+/* 日间水墨复用早期宣纸卡片，米灰底色降低白色反光。 */
+.homepage-shell.pack-day-ink { --pack-card-bg: #e8e4d7; --pack-control-bg: linear-gradient(135deg, #eeeaddf0, #e0e1d2f0); --pack-shadow: inset 0 1px 0 #f2efe329, 0 4px 18px #3b4b3222; --pack-search-radius: 28px 10px 28px 10px; }
+.homepage-shell.theme-pack-active.pack-day-ink::before { filter: saturate(.7) brightness(.96); }
+.homepage-shell.pack-day-ink .site-card { background-color: #e8e4d7; background-image: linear-gradient(90deg, #e8e4d780, #e8e4d726 45%, transparent 72%), var(--ink-art); background-blend-mode: normal, multiply; background-position: right center; background-size: cover; border: 1px solid #8b927044; border-left-color: color-mix(in srgb, var(--link-tint, #718263) 40%, #c9cdb9); box-shadow: inset 0 0 12px #c7bea826, 0 5px 18px #273e2926; }
+.homepage-shell.pack-day-ink .site-card[data-ink-scene='landscape'] { --ink-art: url('/backgrounds/ink-card-landscape-v1.png'); border-radius: 16px 6px 20px 6px; }
+.homepage-shell.pack-day-ink .site-card[data-ink-scene='fish-shrimp'] { --ink-art: url('/backgrounds/ink-card-fish-shrimp-v1.png'); border-radius: 24px 8px 24px 8px; }
+.homepage-shell.pack-day-ink .site-card[data-ink-scene='trees'] { --ink-art: url('/backgrounds/ink-card-trees-v1.png'); border-radius: 7px 18px 7px 18px; }
+.homepage-shell.pack-day-ink .site-card[data-ink-scene='grasses'] { --ink-art: url('/backgrounds/ink-card-grasses-v1.png'); border-radius: 18px 6px 6px 18px; }
+.homepage-shell.pack-day-ink .site-card[data-ink-scene='lotus'] { --ink-art: url('/backgrounds/ink-card-lotus-v1.png'); border-radius: 22px 22px 8px 8px; }
+.homepage-shell.pack-day-ink .site-card[data-ink-scene='river'] { --ink-art: url('/backgrounds/ink-card-river-v1.png'); border-radius: 8px 20px 20px 8px; }
+.homepage-shell.pack-day-ink .site-icon { border-radius: 50%; background: #d4dccc99; border-color: #7b8b7333; }
+.homepage-shell.pack-day-ink .site-name { font-family: Georgia, 'Songti SC', 'SimSun', serif; }
+.homepage-shell.pack-day-ink .search-web { background: #526e5b; color: #eceadd; border-color: #465e4f; border-radius: 20px 7px 20px 7px; }
+.homepage-shell.pack-day-ink .clock-time { font-family: Georgia, 'Songti SC', serif; font-weight: 400; letter-spacing: -.04em; text-shadow: 0 1px 0 #eae7da66; }
+.homepage-shell.pack-day-ink .daily-weather-button { border-radius: 28px 10px 28px 10px; }
+.homepage-shell.pack-day-ink .section-heading h2 { background: #e4e4d6e6; padding: 5px 12px; border-left: 2px solid #657f60; border-radius: 0 12px 12px 0; }
+.homepage-shell.pack-day-ink .navigation-header :is(nav a, button), .homepage-shell.pack-day-ink .floating-link { border-radius: 50%; }
+
+/* 冬日：真实绒毛材质、蓬松包边与奶油色软按钮。 */
+.homepage-shell.pack-winter { --pack-card-bg: linear-gradient(#29344033, #212c3833), url('/backgrounds/theme-winter-fleece-v1.png') center / 160px; --pack-control-bg: linear-gradient(#29344033, #212c3833), url('/backgrounds/theme-winter-fleece-v1.png') center / 140px; --pack-shadow: 0 0 0 3px #76869a44, 0 0 0 6px #76869a18, inset 0 2px 6px #a7b7c822, 0 8px 20px #080e172e; --pack-search-radius: 36px; }
+.homepage-shell.theme-pack-active.pack-winter::before { filter: saturate(.55) brightness(.65); }
+.homepage-shell.pack-winter :is(.site-card, .library-search, .daily-weather-button, .floating-link, .appearance-quick-switch, .navigation-header button, .navigation-header nav a, .navigation-brand, footer a) { background-color: #354253; background-blend-mode: normal, multiply; }
+.homepage-shell.pack-winter .site-card { border: 3px solid #60718688; }
+.homepage-shell.pack-winter .site-icon { background: linear-gradient(145deg, #4b5c70, #374759); border: 2px solid #8296ad55; box-shadow: inset 0 2px 4px #101a2b33, 0 3px 8px #0a112122; border-radius: 18px; }
+.homepage-shell.pack-winter .library-search { border: 4px solid #60718688; }
+.homepage-shell.pack-winter .search-web { border: 2px solid #8296ad55; border-radius: 22px; background: linear-gradient(145deg, #4b5c70, #374759); box-shadow: 0 3px 0 #1a263477, inset 0 1px 0 #b3c3d326; }
+.homepage-shell.pack-winter .clock-time { font-weight: 550; letter-spacing: -.07em; color: #bdcbdb; text-shadow: 0 2px 0 #1d2a3a77, 0 6px 14px #09122033; }
+.homepage-shell.pack-winter .daily-weather-button { border: 3px solid #60718688; border-radius: 32px; }
+.homepage-shell.pack-winter .floating-link { border: 2px solid #8296ad55; border-radius: 18px; }
+.homepage-shell.pack-winter .section-heading h2 { background: #303e50e6; padding: 5px 12px; border-radius: 16px; box-shadow: 0 2px 6px #111b2a33; }
+
+/* 沙漠：砂岩肌理、晒热的陶土与坚实的雕刻边线。 */
+.homepage-shell.pack-desert { --pack-card-bg: linear-gradient(150deg, #513c2fee, #3f2d24ef); --pack-control-bg: linear-gradient(145deg, #513c2fee, #433127ef); --pack-shadow: inset 0 1px 0 #caa07726, 3px 4px 0 #21160f66, 0 9px 22px #130b052e; --pack-search-radius: 8px; }
+.homepage-shell.theme-pack-active.pack-desert::before { filter: saturate(.48) brightness(.7); }
+.homepage-shell.pack-desert .site-card { border: 1px solid #b07a4a6b; border-bottom: 3px solid #a8663c80; border-radius: 6px 18px 6px 18px; }
+.homepage-shell.pack-desert .site-card::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .22; background: url('/backgrounds/sandstone-grain.svg') repeat; mix-blend-mode: multiply; }
+.homepage-shell.pack-desert .site-icon { background: linear-gradient(135deg, #775a3f, #5c422f); border: 1px solid #b6906855; border-radius: 5px 14px 5px 14px; box-shadow: inset 0 2px 3px #20100733; }
+.homepage-shell.pack-desert .search-web { color: #e1c7a5; background: linear-gradient(145deg, #805536, #65412b); border: 1px solid #ae7d5255; border-radius: 5px; box-shadow: 2px 2px 0 #25160e55; }
+.homepage-shell.pack-desert .clock-time { font-weight: 600; letter-spacing: -.045em; text-shadow: 1px 2px 0 #39271b77, 3px 5px 0 #160c0633; }
+.homepage-shell.pack-desert .daily-weather-button { border-radius: 6px 22px 6px 22px; border-bottom: 3px solid #a8663c80; }
+.homepage-shell.pack-desert .section-heading h2 { border-bottom: 2px solid #ad6a3b70; padding: 5px 12px; text-transform: uppercase; font-weight: 700; background: #473226e6; border-radius: 3px 10px 3px 10px; }
+.homepage-shell.pack-desert .navigation-header :is(nav a, button), .homepage-shell.pack-desert .floating-link { border-radius: 5px 12px 5px 12px; }
+
+/* 主题选择缩略图同时预览壁纸、搜索框与卡片材质。 */
+.theme-pack-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.theme-pack-option { min-width: 0; padding: 5px; border: 1px solid var(--ant-color-border, #d9e0e8); border-radius: 12px; text-align: left; cursor: pointer; background: var(--ant-color-bg-container, #fff); }
+.theme-pack-option[aria-pressed='true'] { border-color: var(--ant-color-primary, #2563eb); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ant-color-primary, #2563eb) 15%, transparent); }
+.theme-pack-miniature { display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 12px; height: 72px; background-position: center; background-size: cover; border-radius: 8px; }
+.theme-mini-search { display: block; width: 100%; height: 12px; border-radius: var(--preview-radius); background: var(--preview-surface); box-shadow: 0 1px 4px #00000020; }
+.theme-mini-cards { display: flex; gap: 5px; }
+.theme-mini-cards i { width: 25px; height: 20px; border-radius: var(--preview-radius); background: var(--preview-surface); border: 1px solid #ffffff55; }
+.theme-preview-winter .theme-mini-cards i { box-shadow: 0 0 0 2px #76869a66; }
+.theme-preview-day-ink .theme-mini-cards i { background: #e8e4d7 url('/backgrounds/ink-card-landscape-v1.png') right center / cover; background-blend-mode: multiply; border-color: #8b927044; }
+.theme-preview-day-ink .theme-mini-cards i:nth-child(2) { background-image: url('/backgrounds/ink-card-fish-shrimp-v1.png'); }
+.theme-preview-day-ink .theme-mini-cards i:nth-child(3) { background-image: url('/backgrounds/ink-card-trees-v1.png'); }
+.theme-preview-winter .theme-pack-miniature { background-color: #263247; background-blend-mode: multiply; }
+.theme-preview-desert .theme-pack-miniature { background-color: #39281d; background-blend-mode: multiply; }
+.theme-preview-yin-yang .theme-mini-cards i { background: #33554a url('/backgrounds/ink-card-landscape-v1.png') right center / cover; background-blend-mode: multiply; border-color: #a6bc9133; }
+.theme-preview-yin-yang .theme-mini-cards i:nth-child(2) { background-image: url('/backgrounds/ink-card-fish-dark-v1.png'); background-blend-mode: normal; }
+.theme-preview-yin-yang .theme-mini-cards i:nth-child(3) { background-image: url('/backgrounds/ink-card-shrimp-dark-v1.png'); background-blend-mode: normal; }
+.theme-preview-desert .theme-mini-cards i { box-shadow: 2px 2px 0 #9d542a77; }
+.theme-pack-option strong { display: block; margin: 8px 4px 3px; font-size: 12px; color: var(--ant-color-text, #1d2738); }
+.theme-pack-option small { display: block; margin: 0 4px 4px; font-size: 9px; color: var(--ant-color-text-secondary, #667386); }
+@media (max-width: 767px) {
+  .homepage-shell.theme-pack-active.pack-yin-yang::before { background-image: linear-gradient(180deg, #10262255, #10262200 24%, #10262299 52%, #102622ee 72%), var(--pack-wallpaper), var(--pack-wallpaper); background-size: cover, auto 70%, cover; background-position: center, center top, center; }
+  .homepage-shell.theme-pack-active .library-daily { gap: 18px; }
+  .homepage-shell.theme-pack-active .daily-weather-button { padding: 10px 14px; }
+  .homepage-shell.theme-pack-active .site-card.size-medium:not(.navigation-card-slot) > .site-icon { width: 60px; height: 60px; min-height: 60px; }
+  .homepage-shell.theme-pack-active .site-card.size-medium:not(.navigation-card-slot) > .site-icon :is(img, svg) { width: 44px; height: 44px; }
+  .homepage-shell.pack-desert { --pack-shadow: inset 0 1px 0 #caa07726, 2px 3px 0 #21160f66, 0 6px 16px #130b052e; }
+}

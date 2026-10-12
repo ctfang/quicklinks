@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000">
   <path fill="#ecefe8" d="M0 0h1600v1000H0z"/>
-  <g transform="translate(1220 620)" opacity=".18">
+  <g transform="translate(1220 400)" opacity=".25">
     <g fill="none" stroke="#758879"><circle r="320"/><circle r="270"/><path d="m0-370 262 108 108 262-108 262-262 108-262-108-108-262 108-262Z" stroke-width="2"/></g>
     <circle r="210" fill="#607968"/>
     <path d="M0-210a210 210 0 0 1 0 420 105 105 0 0 1 0-210 105 105 0 0 0 0-210" fill="#fff"/>
     <circle cy="-105" r="26" fill="#fff"/><circle cy="105" r="26" fill="#607968"/>
   </g>
-  <g fill="none" stroke="#b1bfae" opacity=".25"><path d="M-100 700Q250 400 600 700T1300 700M-100 740Q250 440 600 740T1300 740M-100 780Q250 480 600 780T1300 780"/></g>
+  <g fill="none" stroke="#b1bfae" opacity=".25"><path d="M-100 460Q250 160 600 460T1300 460M-100 500Q250 200 600 500T1300 500M-100 540Q250 240 600 540T1300 540"/></g>
 </svg>

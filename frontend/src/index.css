@@ -2,6 +2,7 @@
 @import "tailwindcss";
 @import "./styles/navigation.css";
 @import "./styles/knowledge.css";
+@import "./styles/themePacks.css";
 
 :root { --ui-primary: #2563eb; }
 .ant-modal {
@@ -137,16 +138,17 @@
 }
 
 /* 导航、知识库和设置共用空间外观及背景。 */
-.homepage-shell { isolation: isolate; }
+.homepage-shell { isolation: isolate; --navigation-background-wash: linear-gradient(color-mix(in srgb, var(--nav-bg) 25%, transparent), color-mix(in srgb, var(--nav-bg) 10%, transparent)); }
+.homepage-shell.style-midnight { --navigation-background-wash: linear-gradient(color-mix(in srgb, var(--nav-bg) 85%, transparent), color-mix(in srgb, var(--nav-bg) 80%, transparent)); }
 .homepage-shell::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at 50% -15%, color-mix(in srgb, var(--nav-accent) 14%, transparent), transparent 65%); }
 .homepage-shell.background-plain::before { background: none; }
 .homepage-shell.background-grid::before { background-image: radial-gradient(var(--nav-line) 1px, transparent 1px); background-size: 18px 18px; }
 .homepage-shell.background-glow::before { background: radial-gradient(ellipse at 10% 10%, #9b94ef28, transparent 40%), radial-gradient(ellipse at 90% 30%, #88b9de2a, transparent 45%), radial-gradient(ellipse at 45% 95%, #8adbc825, transparent 40%); }
 .homepage-shell.background-landscape::before, .homepage-shell.background-taichi::before, .homepage-shell.background-geometry::before, .homepage-shell.background-image::before { background-position: center; background-size: cover; background-repeat: no-repeat; }
-.homepage-shell.background-landscape::before { background-image: linear-gradient(var(--nav-bg), transparent), url('/backgrounds/landscape.svg'); }
-.homepage-shell.background-taichi::before { background-image: linear-gradient(var(--nav-bg), transparent), url('/backgrounds/taichi.svg'); }
-.homepage-shell.background-geometry::before { background-image: linear-gradient(var(--nav-bg), transparent), url('/backgrounds/geometry.svg'); }
-.homepage-shell.background-image::before { background-image: linear-gradient(color-mix(in srgb, var(--nav-bg) 85%, transparent), color-mix(in srgb, var(--nav-bg) 65%, transparent)), var(--navigation-image, url('/backgrounds/landscape.svg')); }
+.homepage-shell.background-landscape::before { background-image: var(--navigation-background-wash), url('/backgrounds/landscape.svg'); }
+.homepage-shell.background-taichi::before { background-image: var(--navigation-background-wash), url('/backgrounds/taichi.svg?v=2'); }
+.homepage-shell.background-geometry::before { background-image: var(--navigation-background-wash), url('/backgrounds/geometry.svg'); }
+.homepage-shell.background-image::before { background-image: var(--navigation-background-wash), var(--navigation-image, url('/backgrounds/landscape.svg')); }
 /* 新增背景与缩略图共用图案，使用透明色叠加以适配三种风格。 */
 .homepage-shell.background-dawn, .background-preview.preview-dawn { --background-pattern: radial-gradient(ellipse at 75% 80%, #f4bb7866, transparent 55%), linear-gradient(165deg, #b9c9ed44, #efb6bc44 55%, #f9deaa44); }
 .homepage-shell.background-forest, .background-preview.preview-forest { --background-pattern: radial-gradient(ellipse at 15% 100%, #4b988b44, transparent 55%), radial-gradient(ellipse at 90% 10%, #a6c78e55, transparent 60%), linear-gradient(135deg, #d2e8d533, #b6d9d833); }
@@ -159,6 +161,7 @@
 .homepage-shell:is(.background-dawn, .background-forest, .background-waves, .background-dunes, .background-blossom, .background-stars, .background-paper, .background-contour)::before { background-image: var(--background-pattern); background-size: var(--background-pattern-size, auto); }
 .background-preview:is(.preview-dawn, .preview-forest, .preview-waves, .preview-dunes, .preview-blossom, .preview-stars, .preview-paper, .preview-contour) { background-color: #f5f7fa; background-image: var(--background-pattern); background-size: var(--background-pattern-size, auto); }
 .homepage-shell.style-midnight::before { opacity: .3; }
+.homepage-shell.style-midnight:is(.background-landscape, .background-taichi, .background-geometry, .background-image)::before { opacity: 1; }
 .homepage-shell .navigation-page::before { display: none; }
 .workspace-page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; padding: 88px 0 100px; color: var(--nav-text); }
 .workspace-heading p { color: var(--nav-accent); font-size: 11px; letter-spacing: .16em; margin-bottom: 12px; }
@@ -201,7 +204,7 @@
 .settings-workspace .settings-panel input:not([type='checkbox']), .settings-workspace .settings-panel textarea { background: var(--nav-card); color: var(--nav-text); }
 .settings-workspace button.bg-blue-600, .settings-workspace button.bg-red-600 { color: #fff; }
 .background-preview.preview-landscape { background: url('/backgrounds/landscape.svg') center / cover; }
-.background-preview.preview-taichi { background: url('/backgrounds/taichi.svg') center / cover; }
+.background-preview.preview-taichi { background: url('/backgrounds/taichi.svg?v=2') center / cover; }
 .background-preview.preview-geometry { background: url('/backgrounds/geometry.svg') center / cover; }
 .background-preview.preview-image { background: linear-gradient(135deg, #c2dcd6, #c9d2eb 50%, #efdfc9); }
 @media (max-width: 767px) {

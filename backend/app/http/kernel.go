@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ctfang/navihub/backend/pkg/linkmeta"
 	"github.com/ctfang/navihub/backend/routes"
 	"github.com/gin-gonic/gin"
 	"github.com/go-home-admin/home/bootstrap/constraint"
@@ -43,6 +44,8 @@ func (k *Kernel) Init() {
 }
 
 func (k *Kernel) Boot() {
+	k.Engine.GET("/static/icons/:filename", func(c *gin.Context) { linkmeta.ServeIcon(c.Writer, c.Request) })
+	k.Engine.HEAD("/static/icons/:filename", func(c *gin.Context) { linkmeta.ServeIcon(c.Writer, c.Request) })
 	if embeddedFrontend == nil {
 		return
 	}
@@ -54,6 +57,10 @@ func (k *Kernel) Boot() {
 // serveEmbeddedSPA：静态资源仅来自 embed；勿用 http.FileServer（见 net/http fs.go 对 /index.html 的 301）
 func (k *Kernel) serveEmbeddedSPA(c *gin.Context, distFS fs.FS) {
 	if strings.HasPrefix(c.Request.URL.Path, "/api") {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+	if strings.HasPrefix(c.Request.URL.Path, linkmeta.IconURLPrefix) {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}

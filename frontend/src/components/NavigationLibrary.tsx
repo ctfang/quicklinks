@@ -3,6 +3,7 @@ import { ArrowUpRight, Search, X } from 'lucide-react';
 import type { NavGroup, NavLink, Project } from '../services/api';
 import type { NavigationAppearance } from '../lib/navigationAppearance';
 import { navigationCardSize } from '../lib/navigationCard';
+import { inkCardScene } from '../lib/navigationInk';
 import { buildSearchUrl } from '../lib/searchEngine';
 import { useAppContext } from '../context/AppContext';
 import { NavigationLinkCard } from './LinkGrid';
@@ -34,7 +35,14 @@ export function NavigationLibrary({ links, groups, projects, appearance, loading
   const [weatherLocationOpen, setWeatherLocationOpen] = useState(false);
   const [query, setQuery] = useState('');
   const input = useRef<HTMLInputElement>(null);
-  const sections = useMemo(() => sectionsFor(links, groups, projects), [links, groups, projects]);
+  const sections = useMemo(() => {
+    let offset = 0;
+    return sectionsFor(links, groups, projects).filter(section => section.links.length > 0).map(section => {
+      const result = { ...section, offset };
+      offset += section.links.length;
+      return result;
+    });
+  }, [links, groups, projects]);
   useEffect(() => {
     input.current?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
@@ -58,7 +66,7 @@ export function NavigationLibrary({ links, groups, projects, appearance, loading
       {error && <p className="library-error" role="alert">{error}</p>}
       {loading ? <div className="site-skeletons" role="status" aria-label="正在加载导航">{Array.from({ length: 8 }, (_, index) => <div key={index} />)}</div> : links.length === 0 ? <div className="library-empty"><Search size={28} /><h2>这里还没有导航</h2><p>可在管理工作台添加网站。</p></div> : sections.filter(section => section.links.length > 0).map(section => <section className="library-section" key={section.id} aria-label={section.title || section.project}>
         {(section.title || section.project) && <div className="section-heading">{section.title && <h2>{section.title}</h2>}{section.project && <span className="section-project">{section.project}</span>}</div>}
-        <div className={`site-grid ${(appearance.layoutMode === 'icons' || section.links.every((link, index) => navigationCardSize(link.displaySize, index, appearance.layoutMode) === 'icon')) ? 'icons-only' : ''} ${appearance.cardMode === 'uniform' ? 'uniform-cards' : ''}`}>{section.links.map((link, linkIndex) => <NavigationLinkCard key={link.id} link={link} size={navigationCardSize(link.displaySize, linkIndex, appearance.layoutMode)} />)}</div>
+        <div className={`site-grid ${(appearance.layoutMode === 'icons' || section.links.every((link, index) => navigationCardSize(link.displaySize, index, appearance.layoutMode) === 'icon')) ? 'icons-only' : ''} ${appearance.cardMode === 'uniform' ? 'uniform-cards' : ''}`}>{section.links.map((link, linkIndex) => <NavigationLinkCard key={link.id} link={link} size={navigationCardSize(link.displaySize, linkIndex, appearance.layoutMode)} themed={Boolean(appearance.themePack && appearance.themePack !== 'custom')} inkScene={appearance.themePack === 'yin-yang' || appearance.themePack === 'day-ink' ? inkCardScene(section.offset + linkIndex, appearance.themePack === 'day-ink' ? 'day' : 'dark') : undefined} />)}</div>
       </section>)}
     </div>
   </div>;

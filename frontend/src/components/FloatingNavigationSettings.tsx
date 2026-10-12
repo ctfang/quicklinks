@@ -1,21 +1,31 @@
 import { useState, type FormEvent } from 'react';
-import { Alert, Button, Card, Empty, Input, Modal, Select, Switch, Typography } from 'antd';
+import { Alert, Button, Card, Empty, Input, Modal, Segmented, Select, Switch, Typography } from 'antd';
 import { ArrowDown, ArrowUp, Edit2, Plus, Trash2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { FloatingLink, normalizeFloatingUrl, useFloatingNavigation } from '../lib/floatingNavigation';
 import { NavIcon } from './LinkGrid';
 
-const iconOptions = ['Link', 'Globe', 'Sparkles', 'Brain', 'Sparkle', 'Waves', 'Github', 'BookOpen', 'MessageSquareCode', 'Bot', 'Code', 'Terminal'];
+const iconOptions = [
+  { value: '', label: '自动识别网站图标' },
+  { value: 'Link', label: '链接' }, { value: 'Globe', label: '地球' },
+  { value: 'Sparkles', label: '星光' }, { value: 'Brain', label: '大脑' },
+  { value: 'Sparkle', label: '星芒' }, { value: 'Waves', label: '海浪' },
+  { value: 'Github', label: 'GitHub' }, { value: 'BookOpen', label: '阅读' },
+  { value: 'MessageSquareCode', label: '代码对话' }, { value: 'Bot', label: '机器人' },
+  { value: 'Code', label: '代码' }, { value: 'Terminal', label: '终端' },
+];
 
 export function FloatingNavigationSettings() {
   const { user } = useAppContext();
   const [value, save, storageError, busy] = useFloatingNavigation(user?.id ?? null);
   const [editor, setEditor] = useState<FloatingLink | null>(null);
+  const [iconMode, setIconMode] = useState<'preset' | 'url'>('preset');
   const [error, setError] = useState('');
   const updateDraft = (change: Partial<FloatingLink>) => setEditor(current => current ? { ...current, ...change } : null);
   const edit = (link?: FloatingLink) => {
     setError('');
-    setEditor(link ? { ...link } : { id: crypto.randomUUID(), title: '', url: '', icon: 'Link' });
+    setIconMode(/^https?:\/\//i.test(link?.icon.trim() || '') ? 'url' : 'preset');
+    setEditor(link ? { ...link } : { id: crypto.randomUUID(), title: '', url: '', icon: '' });
   };
   const move = (index: number, delta: number) => {
     const links = [...value.left];
@@ -28,7 +38,14 @@ export function FloatingNavigationSettings() {
     try {
       if (!editor.title.trim()) throw new Error('请填写导航名称');
       if (!editor.url.trim()) throw new Error('请填写网站地址');
-      const link = { ...editor, title: editor.title.trim(), url: normalizeFloatingUrl(editor.url) };
+      let icon = editor.icon.trim();
+      if (iconMode === 'url' && icon) {
+        try {
+          if (!/^https?:\/\//i.test(icon)) throw new Error();
+          icon = normalizeFloatingUrl(icon);
+        } catch { throw new Error('请输入有效的 HTTP 或 HTTPS 图片地址'); }
+      }
+      const link = { ...editor, title: editor.title.trim(), url: normalizeFloatingUrl(editor.url), icon };
       const exists = value.left.some(item => item.id === link.id);
       if (await save({ ...value, left: exists ? value.left.map(item => item.id === link.id ? link : item) : [...value.left, link] })) setEditor(null);
     } catch (err) { setError(err instanceof Error ? err.message : '请输入有效的网站地址'); }
@@ -57,7 +74,18 @@ export function FloatingNavigationSettings() {
       {editor && <form onSubmit={submit} className="space-y-4">
         <div><label htmlFor="floating-title" className="block mb-2">导航名称</label><Input id="floating-title" required autoFocus value={editor.title} onChange={e => updateDraft({ title: e.target.value })} placeholder="例如：GitHub" /></div>
         <div><label htmlFor="floating-url" className="block mb-2">网站地址</label><Input id="floating-url" required value={editor.url} onChange={e => updateDraft({ url: e.target.value })} placeholder="https://github.com" /></div>
-        <div><label htmlFor="floating-icon" className="block mb-2">图标</label><Select id="floating-icon" className="w-full" value={editor.icon} onChange={icon => updateDraft({ icon })} options={[...new Set([...iconOptions, editor.icon])].map(icon => ({ value: icon, label: icon }))} /></div>
+        <div className="space-y-2">
+          <label htmlFor="floating-icon" className="block">图标</label>
+          <Segmented<'preset' | 'url'> value={iconMode} onChange={mode => { setIconMode(mode); updateDraft({ icon: mode === 'url' ? '' : 'Link' }); }} options={[{ value: 'preset', label: '预设图标' }, { value: 'url', label: '图片 URL' }]} />
+          {iconMode === 'preset' ? <Select id="floating-icon" className="w-full" value={editor.icon} onChange={icon => updateDraft({ icon })} options={[
+            ...iconOptions,
+            ...(!iconOptions.some(option => option.value === editor.icon) ? [{ value: editor.icon, label: editor.icon.startsWith('/static/icons/') ? '网站图标（本地）' : editor.icon }] : []),
+          ].map(option => ({ value: option.value, label: <span className="flex items-center gap-2"><span className="flex h-5 w-5 items-center justify-center"><NavIcon name={option.value} url={editor.url} pixelSize={18} strokeWidth={1.7} /></span>{option.label}</span> }))} /> : <>
+            <Input id="floating-icon" type="url" value={editor.icon} onChange={event => updateDraft({ icon: event.target.value })} placeholder="https://example.com/icon.png（可留空）" />
+            <Typography.Text type="secondary">留空自动识别并保存网站图标；下载失败时保留远程地址。</Typography.Text>
+            {/^https?:\/\//i.test(editor.icon.trim()) && <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100"><NavIcon name={editor.icon} url={editor.url} label={editor.title} pixelSize={28} strokeWidth={1.7} /></span>}
+          </>}
+        </div>
         {(error || storageError) && <Alert type="error" title={error || storageError} showIcon />}
         <div className="flex justify-end gap-3"><Button onClick={() => setEditor(null)}>取消</Button><Button type="primary" htmlType="submit" disabled={busy}>保存</Button></div>
       </form>}

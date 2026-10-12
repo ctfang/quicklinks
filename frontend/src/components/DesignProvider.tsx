@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import type { PropsWithChildren } from 'react';
 import { StyleProvider } from '@ant-design/cssinjs';
 import { useAppContext } from '../context/AppContext';
-import { useNavigationAppearance } from '../lib/navigationAppearance';
+import { getThemePack, useNavigationAppearance } from '../lib/navigationAppearance';
 
 // 所有页面共用当前空间的外观，控件同步明暗与强调色。
 export function DesignProvider({ children }: PropsWithChildren) {
@@ -12,15 +12,16 @@ export function DesignProvider({ children }: PropsWithChildren) {
   const { user, currentTeam } = useAppContext();
   const scope = currentTeam ? `team_${currentTeam.id}` : user ? `user_${user.id}` : 'guest';
   const [appearance] = useNavigationAppearance(scope);
-  const dark = pathname === '/reset-password' || appearance.style === 'midnight';
-  const accent = appearance.theme === 'ocean' ? (dark ? '#6bd5c4' : '#188b84') : appearance.theme === 'sunset' ? (dark ? '#eeaf85' : '#b86846') : (dark ? '#8ab4ff' : '#2563eb');
+  const pack = pathname === '/' ? getThemePack(appearance.themePack) : undefined;
+  const dark = pathname === '/reset-password' || (pack ? pack.dark : appearance.style === 'midnight');
+  const accent = pack?.accent || (appearance.theme === 'ocean' ? (dark ? '#6bd5c4' : '#188b84') : appearance.theme === 'sunset' ? (dark ? '#eeaf85' : '#b86846') : (dark ? '#8ab4ff' : '#2563eb'));
   return <StyleProvider layer><ConfigProvider locale={zhCN} componentSize="large" theme={{
-    cssVar: { key: dark ? 'quicklinks-dark' : 'quicklinks-light' },
+    cssVar: { key: pack ? `quicklinks-${appearance.themePack}` : dark ? 'quicklinks-dark' : 'quicklinks-light' },
     algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
     token: {
       colorPrimary: accent,
       colorInfo: accent,
-      borderRadius: 12,
+      borderRadius: pack?.radius || 12,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif',
       fontSize: 14,
       controlHeight: 44,
@@ -35,7 +36,8 @@ export function DesignProvider({ children }: PropsWithChildren) {
         colorLink: '#60a5fa',
         colorLinkHover: '#93c5fd',
       } : { colorBgLayout: '#f5f7fa' }),
+      ...(pack ? { colorBgBase: pack.bg, colorBgLayout: pack.bg, colorBgContainer: pack.card, colorBgElevated: pack.card, colorText: pack.text, colorTextSecondary: pack.muted, colorBorder: pack.line, colorLink: pack.accent } : {}),
     },
-    components: { Modal: { borderRadiusLG: 20 }, Card: { borderRadiusLG: 16 } },
+    components: { Modal: { borderRadiusLG: pack?.radius || 20 }, Card: { borderRadiusLG: pack?.radius || 16 } },
   }}>{children}</ConfigProvider></StyleProvider>;
 }

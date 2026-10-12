@@ -20,13 +20,18 @@ const (
 var errInvalidURL = errors.New("invalid URL")
 
 func Fetch(ctx context.Context, raw string) (title, icon string, err error) {
+	client := publicClient()
+	defer client.CloseIdleConnections()
+	return fetch(ctx, client, raw)
+}
+
+func fetch(ctx context.Context, client *http.Client, raw string) (title, icon string, err error) {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || u.Scheme != "http" && u.Scheme != "https" || u.Host == "" {
 		return "", "", errInvalidURL
 	}
 	base := u.String()
 
-	client := &http.Client{Timeout: clientTimeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base, nil)
 	if err != nil {
 		return "", "", err
@@ -58,7 +63,7 @@ func Fetch(ctx context.Context, raw string) (title, icon string, err error) {
 	if strings.TrimSpace(t) == "" {
 		t = hostnameTitle(u)
 	}
-	iconAbs := resolveIcon(u, iconHref)
+	iconAbs := resolveIcon(resp.Request.URL, iconHref)
 	if iconAbs == "" {
 		iconAbs = defaultFavicon(u)
 	}

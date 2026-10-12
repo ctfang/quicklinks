@@ -93,7 +93,7 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, initialDisplay
       setBgColor(initialData.bgColor || '');
       // 判断当前图标是预设图标还是URL
       const trimmedIcon = (initialData.icon || '').trim();
-      setIconMode(/^https?:\/\//i.test(trimmedIcon) ? 'url' : 'preset');
+      setIconMode(/^https?:\/\//i.test(trimmedIcon) || trimmedIcon.startsWith('/static/icons/') ? 'url' : 'preset');
     } else {
       setTitle('');
       setUrl('');
@@ -122,7 +122,7 @@ export const LinkModal = ({ isOpen, onClose, onSave, initialData, initialDisplay
       const t = title.trim();
       if (t) payload.title = t;
       const ic = icon.trim();
-      if (ic) payload.icon = ic;
+      payload.icon = ic;
       await onSave(payload);
       onClose();
     } catch (err) {

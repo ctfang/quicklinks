@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Button, Input, Popover } from 'antd';
 import { Palette } from 'lucide-react';
-import { NavigationAppearance as Appearance, styleOptions, backgroundOptions } from '../lib/navigationAppearance';
+import { NavigationAppearance as Appearance, styleOptions, backgroundOptions, themePackPresets } from '../lib/navigationAppearance';
 import { FloatingNavigationConfig, type FloatingLink } from '../lib/floatingNavigation';
 import { NavIcon } from './LinkGrid';
 
@@ -22,10 +22,16 @@ export const FloatingNavigation = memo(function FloatingNavigation({ value, rece
 
 function AppearanceControls({ value, onChange }: { value: Appearance; onChange: (next: Appearance) => void }) {
   return <div className="appearance-controls space-y-4">
+    <div><p className="text-sm font-medium mb-2">主题套装</p><div className="theme-pack-options">{Object.entries(themePackPresets).map(([id, pack]) => <button key={id} type="button" className={`theme-pack-option theme-preview-${id}`} aria-pressed={value.themePack === id} onClick={() => onChange({ ...value, themePack: id as Appearance['themePack'] })}>
+      <span className="theme-pack-miniature" style={{ backgroundImage: `url('${pack.wallpaper}')`, '--preview-surface': pack.surface, '--preview-radius': `${pack.radius / 2}px` } as React.CSSProperties}><i className="theme-mini-search" /><span className="theme-mini-cards"><i /><i /><i /></span></span>
+      <strong>{pack.label}</strong><small>{pack.description}</small>
+    </button>)}</div><Button size="small" className="mt-3" aria-pressed={!value.themePack || value.themePack === 'custom'} onClick={() => onChange({ ...value, themePack: 'custom' })}>自由搭配</Button></div>
+    {value.themePack && value.themePack !== 'custom' ? <p className="text-xs text-slate-500">套装统一设计背景、搜索栏、卡片和按钮；选择“自由搭配”恢复原有外观。</p> : <>
     <div><p className="text-sm font-medium mb-2">风格</p><div className="appearance-style-options">{styleOptions.map(([style, label]) => <button className={`appearance-style-option preview-${style}`} key={style} aria-pressed={value.style === style} onClick={() => onChange({ ...value, style })}><span className="style-preview"><i /><i /><i /></span><span>{label}</span></button>)}</div></div>
     <div><p className="text-sm font-medium mb-2">背景</p><div className="appearance-background-options">{backgroundOptions.map(([background, label]) => <button key={background} aria-pressed={value.background === background} onClick={() => onChange({ ...value, background })}><span className={`background-preview preview-${background}`} /><span>{label}</span></button>)}</div></div>
     {value.background === 'image' && <div><label htmlFor="background-image-url" className="text-sm block mb-2">图片地址</label><Input id="background-image-url" type="url" placeholder="https://example.com/background.jpg" value={value.backgroundImage || ''} onChange={event => onChange({ ...value, backgroundImage: event.target.value })} /><p className="text-xs text-slate-500 mt-2">支持 HTTP / HTTPS 图片链接，留空时显示默认山水背景。</p></div>}
     <div><p className="text-sm font-medium mb-2">强调色</p><div className="appearance-colors">{([['aurora', '经典蓝'], ['ocean', '青绿'], ['sunset', '陶土']] as const).map(([theme, label]) => <button key={theme} className={`color-${theme}`} aria-label={label} aria-pressed={value.theme === theme} title={label} onClick={() => onChange({ ...value, theme })} />)}</div></div>
+    </>}
     <div><p className="text-sm font-medium mb-2">布局</p><div className="flex flex-wrap gap-2">{([['mixed', '大小错落'], ['icons', '仅图标'], ['configured', '按链接设置']] as const).map(([layoutMode, label]) => <Button size="small" key={layoutMode} aria-pressed={value.layoutMode === layoutMode} type={value.layoutMode === layoutMode ? 'primary' : 'default'} onClick={() => onChange({ ...value, layoutMode })}>{label}</Button>)}</div></div>
   </div>;
 }

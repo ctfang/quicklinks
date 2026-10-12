@@ -4,6 +4,7 @@ import * as Icons from 'lucide-react';
 import { Edit2, Trash2, Plus, ArrowUpRight, GripVertical } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { navigationCardSize, type CardLayout } from '../lib/navigationCard';
+import type { InkCardScene } from '../lib/navigationInk';
 
 // 最近导航复用主列表已失败的图标结果，避免每次新建记录再次加载再切回占位图。
 const failedIconUrls = new Set<string>();
@@ -36,7 +37,7 @@ export const NavIcon = memo(function NavIcon({
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const trimmed = (name || '').trim();
-  const isUrl = /^https?:\/\//i.test(trimmed);
+  const isUrl = /^https?:\/\//i.test(trimmed) || /^\/static\/icons\/[a-f0-9]{64}\.(png|jpg|gif|webp|ico)$/.test(trimmed);
 
   // 如果有有效的图标URL且加载成功，显示图片
   if (isUrl && failedSrc !== trimmed && !failedIconUrls.has(trimmed)) {
@@ -86,14 +87,14 @@ interface LinkGridProps {
   layoutMode?: CardLayout;
 }
 
-export function NavigationLinkCard({ link, size, className }: { link: NavLink; size: string; className?: string }) {
+export function NavigationLinkCard({ link, size, className, themed = false, inkScene }: { link: NavLink; size: string; className?: string; themed?: boolean; inkScene?: InkCardScene }) {
   let domain = link.url;
   try { domain = new URL(link.url).hostname.replace(/^www\./, ''); } catch { /* 保留地址 */ }
   // 中文等全宽字符按一字计算，拉丁字符和空格按较窄宽度估算。
   const titleUnits = Math.max(1, Array.from(link.title.trim()).reduce((total, char) => total + (/\s/.test(char) ? 0.3 : /[\x00-\x7f]/.test(char) ? 0.6 : 1), 0));
-  return <a className={cn(`site-card size-${size}`, link.bgColor && 'has-custom-color', className)} style={{ background: link.bgColor || undefined, '--nav-title-units': titleUnits } as React.CSSProperties}
+  return <a className={cn(`site-card size-${size}`, link.bgColor && 'has-custom-color', className)} style={{ background: themed ? undefined : link.bgColor || undefined, '--link-tint': link.bgColor || undefined, '--nav-title-units': titleUnits } as React.CSSProperties}
     href={link.url} target="_blank" rel="noopener noreferrer" title={`${link.title} · ${domain}`} aria-label={link.title} draggable={false}
-    data-nav-title={link.title} data-nav-icon={link.icon} data-card-size={size}>
+    data-nav-title={link.title} data-nav-icon={link.icon} data-card-size={size} data-ink-scene={inkScene}>
     <span className="site-icon"><NavIcon name={link.icon} url={link.url} label={link.title} pixelSize={size === 'medium' ? 40 : size === 'large' ? 34 : 26} strokeWidth={1.7} /></span>
     {size !== 'icon' && <span className="site-copy"><span className="site-name">{link.title}</span><span className="site-domain">{domain}</span></span>}
     {size !== 'icon' && <ArrowUpRight className="site-arrow" size={15} />}

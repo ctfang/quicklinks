@@ -572,6 +572,10 @@ type linkCreateBody struct {
 
 func linksCreate(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		jwtUID, ok := requireAuthUserID(c)
+		if !ok {
+			return
+		}
 		var body linkCreateBody
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
@@ -609,6 +613,13 @@ func linksCreate(db *sql.DB) gin.HandlerFunc {
 			}
 			if needIcon && ico != "" {
 				icon = ico
+				if local, err := linkmeta.CacheIcon(ctx, ico); err == nil {
+					icon = local
+				} else if u, err := url.Parse(rawURL); err == nil {
+					if local, err := linkmeta.CacheIcon(ctx, u.Scheme+"://"+u.Host+"/favicon.ico"); err == nil {
+						icon = local
+					}
+				}
 			}
 		}
 
@@ -631,11 +642,6 @@ func linksCreate(db *sql.DB) gin.HandlerFunc {
 		if body.DisplaySize != nil && *body.DisplaySize != "" {
 			ds = *body.DisplaySize
 		}
-		jwtUID, ok := requireAuthUserID(c)
-		if !ok {
-			return
-		}
-
 		var userIDCol interface{}
 		var teamIns interface{}
 		var projIns interface{}
@@ -818,6 +824,25 @@ func linksUpdate(db *sql.DB) gin.HandlerFunc {
 		}
 		if len(raw) > 0 && !validateLinkUpdateMutation(c, db, jwtUID, raw) {
 			return
+		}
+		if value, exists := raw["icon"]; exists {
+			var icon *string
+			if err := json.Unmarshal(value, &icon); err == nil && (icon == nil || strings.TrimSpace(*icon) == "") {
+				var website string
+				if value, exists := raw["url"]; exists {
+					if err := json.Unmarshal(value, &website); err != nil {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "invalid url"})
+						return
+					}
+				} else if err := db.QueryRow(`SELECT url FROM links WHERE id = ?`, id).Scan(&website); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "读取链接失败"})
+					return
+				}
+				ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+				icon := linkmeta.AutoIcon(ctx, website)
+				cancel()
+				raw["icon"], _ = json.Marshal(icon)
+			}
 		}
 		if len(raw) > 0 {
 			var sets []string

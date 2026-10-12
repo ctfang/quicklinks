@@ -1,6 +1,7 @@
 node_modules/
 build/
 dist/
+backend/data/icons/
 database.sqlite
 coverage/
 .DS_Store
@@ -13,6 +14,14 @@ coverage/
 .idea/
 .vscode/
 app
+!backend/app/
+backend/app/*
+!backend/app/http/
+backend/app/http/*
+!backend/app/http/*.go
+!backend/app/navihub/
+backend/app/navihub/*
+!backend/app/navihub/*.go
 
 # Git backup
 .git.backup/
